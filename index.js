@@ -49,6 +49,14 @@ app.get('/', function (request, response) {
     });
 });
 
+app.get('/search', function (request, response) {
+    db.manyOrNone("SELECT id, created, name, url FROM bookmarks WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)", request.query.q).then(function (data) {
+        response.status(200).json(data);
+    }).catch(function (error) {
+        response.status(500).json({status: 'error'});
+    });
+});
+
 app.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
