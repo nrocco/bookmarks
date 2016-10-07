@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "start": "node server.js"
+  },
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.14.0",
+    "node-readability": "^2.2.0",
+    "sanitizer": "^0.1.3"
+  }
+}
