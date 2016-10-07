@@ -39,8 +39,32 @@ function stripHTML(html) {
 
 app.set('port', (process.env.PORT || 5000));
 
-app.get('/', function (request, response) {
-    scraper(request.query.uri, function (data) {
+
+// ============================================================
+
+
+app.get('/bookmarks', function (request, response) {
+    var params = {
+        limit: request.query.limit || 25,
+        offset: request.query.offset || 0,
+    }
+
+    if (request.query.q) {
+        params.q = request.query.q
+        var query = "SELECT id, created, name, url FROM bookmarks WHERE to_tsvector('english', content || ' ' || name || ' ' || url) @@ to_tsquery('english', ${q}) ORDER BY created DESC LIMIT ${limit} OFFSET ${offset}";
+    } else {
+        var query = "SELECT id, created, name, url FROM bookmarks ORDER BY created DESC LIMIT ${limit} OFFSET ${offset}";
+    }
+
+    db.manyOrNone(query, params).then(function (data) {
+        response.status(200).json(data);
+    }).catch(function (error) {
+        response.status(500).json({status: 'error'});
+    });
+});
+
+app.post('/bookmarks', function (request, response) {
+    scraper(request.query.url, function (data) {
         db.none("INSERT INTO bookmarks (url, name, content) VALUES (${url}, ${title}, ${contents})", data).then(function () {
             response.status(204).json({status: 'ok'});
         }).catch(function (error) {
@@ -49,11 +73,23 @@ app.get('/', function (request, response) {
     });
 });
 
-app.get('/search', function (request, response) {
-    db.manyOrNone("SELECT id, created, name, url FROM bookmarks WHERE to_tsvector('english', content) @@ to_tsquery('english', $1)", request.query.q).then(function (data) {
+app.get('/bookmarks/:id', function (request, response) {
+    db.one("SELECT * FROM bookmarks WHERE id = $1", request.params.id).then(function (data) {
         response.status(200).json(data);
     }).catch(function (error) {
-        response.status(500).json({status: 'error'});
+        response.status(404);
+    });
+});
+
+app.patch('/bookmarks/:id', function (request, response) {
+    response.status(200).json({});
+});
+
+app.delete('/bookmarks/:id', function (request, response) {
+    db.none("DELETE FROM bookmarks WHERE id = $1 LIMIT 1", request.params.id).then(function (data) {
+        response.status(204);
+    }).catch(function (error) {
+        response.status(404);
     });
 });
 
