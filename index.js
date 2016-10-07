@@ -1,10 +1,10 @@
 var express = require('express'),
     read = require("node-readability"),
     sanitizer = require("sanitizer"),
-    pgp = require("pg-promise");
+    pgp = require("pg-promise")();
 
 var app = express(),
-    db = pgp(process.env.DATABASE_URL;
+    db = pgp(process.env.DATABASE_URL);
 
 
 function scraper(url, callback) {
