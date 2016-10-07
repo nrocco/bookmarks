@@ -1,7 +1,11 @@
 var express = require('express'),
-    app = express(),
     read = require("node-readability"),
-    sanitizer = require("sanitizer");
+    sanitizer = require("sanitizer"),
+    pgp = require("pg-promise");
+
+var app = express(),
+    db = pgp(process.env.DATABASE_URL;
+
 
 function scraper(url, callback) {
     read(url, function(err, doc) {
@@ -38,7 +42,12 @@ app.set('port', (process.env.PORT || 5000));
 
 app.get('/', function (request, response) {
     scraper(request.query.uri, function (data) {
-        response.send(data.contents);
+        db.none("INSERT INTO bookmarks (url, name, content) VALUES (${url}, ${title}, ${contents})", data).then(function () {
+            response.send('nee');
+        }).catch(function () {
+            response.send('jaa');
+        });
+        // response.send(data.contents);
     });
 });
 
