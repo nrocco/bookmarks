@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 var express = require('express'),
     app = express(),
     read = require("node-readability"),
@@ -35,13 +34,14 @@ function stripHTML(html) {
     return clean.trim();
 }
 
+app.set('port', (process.env.PORT || 5000));
 
-app.get('/', function (req, res) {
-    scraper(req.query.uri, function (data) {
-        res.send(data.contents);
+app.get('/', function (request, response) {
+    scraper(request.query.uri, function (data) {
+        response.send(data.contents);
     });
 });
 
-app.listen(3000, function () {
-    console.log('Example app listening on port 3000!');
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
 });
