@@ -1,10 +1,26 @@
 var express = require('express'),
+    cookieParser = require('cookie-parser'),
     read = require("node-readability"),
     sanitizer = require("sanitizer"),
     pgp = require("pg-promise")();
 
 var app = express(),
-    db = pgp(process.env.DATABASE_URL);
+    db = pgp(process.env.DATABASE_URL),
+    apiSecret = process.env.API_SECRET || 'foobar';
+
+app.use(cookieParser())
+
+app.use(function (request, response, next) {
+    console.log(new Date().toISOString(), request.method, request.originalUrl);
+    next();
+});
+
+app.use(function (request, response, next) {
+    if (request.originalUrl !== '/' && (!request.cookies.secret || request.cookies.secret !== apiSecret)) {
+        return response.sendStatus(401);
+    }
+    next();
+});
 
 function scraper(url, callback) {
     read(url, function(err, doc) {
@@ -44,7 +60,7 @@ app.use(express.static('public'));
 // ============================================================
 
 
-app.get('/api/bookmarks', function (request, response) {
+app.get('/bookmarks', function (request, response) {
     var params = {
         limit: request.query.limit || 25,
         offset: request.query.offset || 0,
@@ -67,7 +83,7 @@ app.get('/api/bookmarks', function (request, response) {
 app.get('/bookmarks/add', function (request, response) {
     scraper(request.query.url, function (data) {
         db.none("INSERT INTO bookmarks (url, name, content) VALUES (${url}, ${title}, ${contents})", data).then(function () {
-            response.status(204).json({status: 'ok'});
+            response.redirect(request.query.url);
         }).catch(function (error) {
             response.status(500).json({status: 'error'});
         });
@@ -91,5 +107,5 @@ app.delete('/bookmarks/:id', function (request, response) {
 });
 
 app.listen(app.get('port'), function() {
-  console.log('Node app is running on http://0.0.0.0:', app.get('port'));
+  console.log('Node app is running on http://0.0.0.0:'+app.get('port'));
 });
