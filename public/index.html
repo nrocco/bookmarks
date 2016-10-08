@@ -1,0 +1,61 @@
+<!doctype html>
+<html class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <title update-title>Agile Falls</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" integrity="sha256-fmMNkMcjSw3xcp9iuPnku/ryk9kaWgrEbfJfKmdZ45o=" crossorigin="anonymous" />
+        <style>
+            .container {
+                padding-top: 15px;
+            }
+        </style>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular.min.js" integrity="sha256-6Sr0HqNgUf/p88g6vsl87CrAnNqiOWhjlY6LS8jeWHA=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-aria.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-animate.min.js" integrity="sha256-QbW7ReHd+kSZ+oECLxJqwMAEfSS7nQFBlF76hdWOTBA=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-touch.min.js" integrity="sha256-8PhLTPxH6rn7uJ36c6Oe0Io10mU70IJRvP+zq/sxSg8=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-cookies.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
+        <script type="text/javascript">
+            var app = angular.module("agile", ['ngCookies']);
+            app.controller("MainController", ['$scope', '$http', '$cookies', function($scope, $http, $cookies) {
+                //$cookies.put('secret', 'foobar');
+                $scope.getBookmarks = function() {
+                    var payload = {};
+                    if ($scope.search) {
+                        payload.q = $scope.search;
+                    }
+                    $http.get('/bookmarks', {params: payload}).then(function (response) {
+                        $scope.bookmarks = response.data;
+                    });
+                };
+            }]);
+        </script>
+    </head>
+    <body ng-app="agile" ng-controller="MainController">
+        <div class="container">
+            <div class="row">
+                <div class="col-xs-12">
+                    <form ng-submit="getBookmarks()" ng-init="getBookmarks()">
+                        <input type="text" class="form-control" placeholder="Search bookmarks" ng-model="search" autofocus>
+                        <input type="submit" id="submit" value="Submit" class="hidden" />
+                    </form>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="panel panel-default" ng-repeat="bookmark in bookmarks">
+                        <div class="panel-heading">
+                            <h3 class="panel-title"><a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a></h3>
+                        </div>
+                        <div class="panel-body">
+                            <a ng-href="{{ bookmark.url }}">{{ bookmark.url }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
