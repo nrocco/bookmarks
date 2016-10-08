@@ -38,12 +38,13 @@ function stripHTML(html) {
 }
 
 app.set('port', (process.env.PORT || 5000));
+app.use(express.static('public'));
 
 
 // ============================================================
 
 
-app.get('/bookmarks', function (request, response) {
+app.get('/api/bookmarks', function (request, response) {
     var params = {
         limit: request.query.limit || 25,
         offset: request.query.offset || 0,
@@ -63,7 +64,7 @@ app.get('/bookmarks', function (request, response) {
     });
 });
 
-app.post('/bookmarks', function (request, response) {
+app.get('/bookmarks/add', function (request, response) {
     scraper(request.query.url, function (data) {
         db.none("INSERT INTO bookmarks (url, name, content) VALUES (${url}, ${title}, ${contents})", data).then(function () {
             response.status(204).json({status: 'ok'});
@@ -74,15 +75,11 @@ app.post('/bookmarks', function (request, response) {
 });
 
 app.get('/bookmarks/:id', function (request, response) {
-    db.one("SELECT * FROM bookmarks WHERE id = $1", request.params.id).then(function (data) {
+    db.one("SELECT id, created, url, name, content FROM bookmarks WHERE id = $1", request.params.id).then(function (data) {
         response.status(200).json(data);
     }).catch(function (error) {
         response.status(404);
     });
-});
-
-app.patch('/bookmarks/:id', function (request, response) {
-    response.status(200).json({});
 });
 
 app.delete('/bookmarks/:id', function (request, response) {
@@ -94,5 +91,5 @@ app.delete('/bookmarks/:id', function (request, response) {
 });
 
 app.listen(app.get('port'), function() {
-  console.log('Node app is running on port', app.get('port'));
+  console.log('Node app is running on http://0.0.0.0:', app.get('port'));
 });
