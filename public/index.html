@@ -9,6 +9,18 @@
             .container {
                 padding-top: 15px;
             }
+            .bookmarks .panel-heading h3 {
+                line-height: 1.4;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+            .bookmarks .panel-heading small {
+                display: block;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+            }
         </style>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular.min.js" integrity="sha256-6Sr0HqNgUf/p88g6vsl87CrAnNqiOWhjlY6LS8jeWHA=" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-aria.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
@@ -17,7 +29,7 @@
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-cookies.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
         <script type="text/javascript">
             var app = angular.module("agile", ['ngCookies']);
-            app.controller("MainController", ['$scope', '$http', '$cookies', function($scope, $http, $cookies) {
+            app.controller("MainController", ['$scope', '$http', '$cookies', '$window', function($scope, $http, $cookies, $window) {
                 $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
 
                 $scope.login = function() {
@@ -43,10 +55,12 @@
                     });
                 };
 
-                $scope.delete = function (bookmark) {
-                    $http.delete('/bookmarks/'+bookmark.id).then(function (response) {
-                        console.log(response);
-                    });
+                $scope.delete = function (bookmark, index) {
+                    if ($window.confirm("Are you sure you want to delete this bookmark?")) {
+                        $http.delete('/bookmarks/'+bookmark.id).then(function (response) {
+                            $scope.bookmarks.splice(index, 1);
+                        });
+                    }
                 };
             }]);
         </script>
@@ -57,10 +71,9 @@
                 <div class="col-xs-12">
                     <form ng-submit="getBookmarks()" ng-init="getBookmarks()">
                         <div class="input-group">
-                            <span class="input-group-addon" id="basic-addon1">@</span>
                             <input type="text" class="form-control" placeholder="Search bookmarks" ng-model="search" autofocus>
                             <span class="input-group-btn">
-                                <button type="submit" id="submit" class="btn btn-primary hidden" type="button">Search!</button>
+                                <button class="btn btn-primary" type="submit" >Go</button>
                                 <button class="btn btn-danger" type="button" ng-click="logout()" ng-if="loggedIn">Logout</button>
                                 <button class="btn btn-success" type="button" ng-click="login()" ng-if="!loggedIn">Login</button>
                             </span>
@@ -71,17 +84,15 @@
 
             <hr />
 
-            <div class="row">
+            <div class="row bookmarks">
                 <div class="col-xs-12">
                     <div class="panel panel-default" ng-repeat="bookmark in bookmarks">
                         <div class="panel-heading">
-                            <h3 class="panel-title">
-                                <a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a>
-                                <button type="button" class="close" aria-label="Close" ng-click="delete(bookmark)"><span aria-hidden="true">&times;</span></button>
-                            </h3>
+                            <h3 class="panel-title"><a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a></h3>
+                            <small class="text-success">{{ bookmark.url }}</small>
                         </div>
                         <div class="panel-body">
-                            <a ng-href="{{ bookmark.url }}">{{ bookmark.url }}</a>
+                            <small><em>{{ bookmark.created|date:'mediumDate' }}</em> &mdash; <a href ng-click="edit(bookmark)">Edit</a> <a href ng-click="delete(bookmark, $index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</small>
                         </div>
                     </div>
                 </div>
