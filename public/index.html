@@ -39,7 +39,7 @@
                 $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
 
                 $scope.login = function() {
-                    $cookies.put('secret', $scope.search);
+                    $cookies.put('secret', $scope.search, {secure: true, expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))});
                     $scope.loggedIn = true;
                     $scope.search = null;
                     $scope.getBookmarks();
