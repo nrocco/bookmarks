@@ -1,9 +1,11 @@
 <!doctype html>
 <html class="no-js">
     <head>
+        <base href="/">
         <meta charset="utf-8">
         <title update-title>Agile Falls</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+        <link rel="search" type="application/opensearchdescription+xml" href="https://agile-falls-43000.herokuapp.com/osd.xml" title="Agile Falls" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" integrity="sha256-fmMNkMcjSw3xcp9iuPnku/ryk9kaWgrEbfJfKmdZ45o=" crossorigin="anonymous" />
         <style>
             .container {
@@ -29,7 +31,11 @@
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-cookies.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
         <script type="text/javascript">
             var app = angular.module("agile", ['ngCookies']);
-            app.controller("MainController", ['$scope', '$http', '$cookies', '$window', function($scope, $http, $cookies, $window) {
+            app.config(function($locationProvider) {
+                $locationProvider.html5Mode(true);
+            });
+            app.controller("MainController", ['$scope', '$http', '$cookies', '$window', '$location', function($scope, $http, $cookies, $window, $location) {
+                $scope.search = $location.search()['search'];
                 $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
 
                 $scope.login = function() {

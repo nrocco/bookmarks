@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+    <ShortName>Agile Falls</ShortName>
+    <Description>Search Agile Falls Bookmarks.</Description>
+    <Image width="16" height="16" type="image/x-icon">https://agile-falls-43000.herokuapp.com/apple-touch-icon.png</Image>
+    <Url method="get" rel="results" type="text/html" template="https://agile-falls-43000.herokuapp.com/?search={searchTerms}" />
+    <Url rel="self" type="application/opensearchdescription+xml" template="https://agile-falls-43000.herokuapp.com/osd.xml" />
+    <Language>en</Language>
+    <InputEncoding>UTF-8</InputEncoding>
+</OpenSearchDescription>
