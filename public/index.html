@@ -18,7 +18,21 @@
         <script type="text/javascript">
             var app = angular.module("agile", ['ngCookies']);
             app.controller("MainController", ['$scope', '$http', '$cookies', function($scope, $http, $cookies) {
-                //$cookies.put('secret', 'foobar');
+                $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
+
+                $scope.login = function() {
+                    $cookies.put('secret', $scope.search);
+                    $scope.loggedIn = true;
+                    $scope.search = null;
+                    $scope.getBookmarks();
+                };
+
+                $scope.logout = function() {
+                    $cookies.remove('secret');
+                    $scope.loggedIn = false;
+                    $scope.bookmarks = [];
+                };
+
                 $scope.getBookmarks = function() {
                     var payload = {};
                     if ($scope.search) {
@@ -26,6 +40,12 @@
                     }
                     $http.get('/bookmarks', {params: payload}).then(function (response) {
                         $scope.bookmarks = response.data;
+                    });
+                };
+
+                $scope.delete = function (bookmark) {
+                    $http.delete('/bookmarks/'+bookmark.id).then(function (response) {
+                        console.log(response);
                     });
                 };
             }]);
@@ -36,8 +56,15 @@
             <div class="row">
                 <div class="col-xs-12">
                     <form ng-submit="getBookmarks()" ng-init="getBookmarks()">
-                        <input type="text" class="form-control" placeholder="Search bookmarks" ng-model="search" autofocus>
-                        <input type="submit" id="submit" value="Submit" class="hidden" />
+                        <div class="input-group">
+                            <span class="input-group-addon" id="basic-addon1">@</span>
+                            <input type="text" class="form-control" placeholder="Search bookmarks" ng-model="search" autofocus>
+                            <span class="input-group-btn">
+                                <button type="submit" id="submit" class="btn btn-primary hidden" type="button">Search!</button>
+                                <button class="btn btn-danger" type="button" ng-click="logout()" ng-if="loggedIn">Logout</button>
+                                <button class="btn btn-success" type="button" ng-click="login()" ng-if="!loggedIn">Login</button>
+                            </span>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -48,7 +75,10 @@
                 <div class="col-xs-12">
                     <div class="panel panel-default" ng-repeat="bookmark in bookmarks">
                         <div class="panel-heading">
-                            <h3 class="panel-title"><a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a></h3>
+                            <h3 class="panel-title">
+                                <a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a>
+                                <button type="button" class="close" aria-label="Close" ng-click="delete(bookmark)"><span aria-hidden="true">&times;</span></button>
+                            </h3>
                         </div>
                         <div class="panel-body">
                             <a ng-href="{{ bookmark.url }}">{{ bookmark.url }}</a>

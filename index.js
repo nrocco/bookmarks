@@ -64,10 +64,10 @@ app.get('/bookmarks', function (request, response) {
     var params = {
         limit: request.query.limit || 25,
         offset: request.query.offset || 0,
+        q: request.query.q
     }
 
-    if (request.query.q) {
-        params.q = request.query.q
+    if (params.q) {
         var query = "SELECT id, created, name, url FROM bookmarks WHERE to_tsvector('english', content || ' ' || name || ' ' || url) @@ to_tsquery('english', ${q}) OR name LIKE '%${q#}%' OR url LIKE '%${q#}%' ORDER BY created DESC LIMIT ${limit} OFFSET ${offset}";
     } else {
         var query = "SELECT id, created, name, url FROM bookmarks ORDER BY created DESC LIMIT ${limit} OFFSET ${offset}";
