@@ -91,7 +91,7 @@ bookmarkRouter.get('/bookmarks/:id', function (request, response) {
 });
 
 bookmarkRouter.delete('/bookmarks/:id', function (request, response) {
-    db.none("DELETE FROM bookmarks WHERE id = $1 LIMIT 1", request.params.id).then(function (data) {
+    db.none("DELETE FROM bookmarks WHERE id = ${id} LIMIT 1", request.params).then(function (data) {
         response.status(204);
     }).catch(function (error) {
         response.status(404);
