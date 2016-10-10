@@ -82,19 +82,22 @@ bookmarkRouter.get('/bookmarks/add', function (request, response) {
     });
 });
 
-bookmarkRouter.get('/bookmarks/:id', function (request, response) {
+bookmarkRouter.get('/bookmarks/:id', function (request, response, next) {
     db.one("SELECT id, created, url, name, content FROM bookmarks WHERE id = $1", request.params.id).then(function (data) {
         response.status(200).json(data);
     }).catch(function (error) {
-        response.status(404);
+        response.status(404).json();
+        next();
     });
 });
 
-bookmarkRouter.delete('/bookmarks/:id', function (request, response) {
-    db.none("DELETE FROM bookmarks WHERE id = ${id} LIMIT 1", request.params).then(function (data) {
-        response.status(204);
+bookmarkRouter.delete('/bookmarks/:id', function (request, response, next) {
+    db.result("DELETE FROM bookmarks WHERE id = $1", request.params.id).then(function (result) {
+        response.status(result.rowCount > 0 ? 204 : 404).json();
+        next();
     }).catch(function (error) {
-        response.status(404);
+        response.status(404).json();
+        next();
     });
 });
 
