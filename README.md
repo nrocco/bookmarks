@@ -1,7 +1,7 @@
-agile-falls-43000
-=================
+bookmarks
+=========
 
-Personal zero-touch bookmarking app, with full text search support.
+Personal zero-touch bookmarking app in the cloud, with full text search support.
 
 
 installation

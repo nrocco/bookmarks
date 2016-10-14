@@ -3,9 +3,9 @@
     <head>
         <base href="/">
         <meta charset="utf-8">
-        <title update-title>Agile Falls</title>
+        <title update-title>Bookmarks</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <link rel="search" type="application/opensearchdescription+xml" href="https://agile-falls-43000.herokuapp.com/osd.xml" title="Agile Falls" />
+        <link rel="search" type="application/opensearchdescription+xml" href="https://agile-falls-43000.herokuapp.com/osd.xml" title="Bookmarks" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" integrity="sha256-fmMNkMcjSw3xcp9iuPnku/ryk9kaWgrEbfJfKmdZ45o=" crossorigin="anonymous" />
         <style>
             .container {
@@ -30,7 +30,7 @@
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-touch.min.js" integrity="sha256-8PhLTPxH6rn7uJ36c6Oe0Io10mU70IJRvP+zq/sxSg8=" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.8/angular-cookies.min.js" integrity="sha256-+7kz4mQIciQvfAobRzT8Bs/bimxQ8k9NG+NPgX3ewvw=" crossorigin="anonymous"></script>
         <script type="text/javascript">
-            var app = angular.module("agile", ['ngCookies']);
+            var app = angular.module("app", ['ngCookies']);
             app.config(function($locationProvider) {
                 $locationProvider.html5Mode(true);
             });
@@ -39,7 +39,7 @@
                 $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
 
                 $scope.login = function() {
-                    $cookies.put('secret', $scope.search, {secure: true, expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))});
+                    $cookies.put('secret', $scope.search, {expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))});
                     $scope.loggedIn = true;
                     $scope.search = null;
                     $scope.getBookmarks();
@@ -71,7 +71,7 @@
             }]);
         </script>
     </head>
-    <body ng-app="agile" ng-controller="MainController">
+    <body ng-app="app" ng-controller="MainController">
         <div class="container">
             <div class="row">
                 <div class="col-xs-12">

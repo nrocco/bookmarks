@@ -1,7 +1,7 @@
 {
-  "name": "agile-falls-43000",
+  "name": "bookmarks",
   "version": "0.0.1",
-  "description": "A sample Node.js app using Express",
+  "description": "Personal zero-touch bookmarking app in the cloud, with full text search support.",
   "engines": {
     "node": "6.7.0"
   },
@@ -18,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nrocco/agile-falls-43000"
+    "url": "https://github.com/nrocco/bookmarks"
   },
   "keywords": [
     "node",
