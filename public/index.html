@@ -52,12 +52,18 @@
                 };
 
                 $scope.getBookmarks = function() {
+                    $scope.bookmarks = [];
+                    $scope.error = undefined
+
                     var payload = {};
                     if ($scope.search) {
                         payload.q = $scope.search;
                     }
                     $http.get('/bookmarks', {params: payload}).then(function (response) {
                         $scope.bookmarks = response.data;
+                        $scope.noResults = (response.data.length === 0);
+                    }, function (response) {
+                        $scope.error = response;
                     });
                 };
 
@@ -92,13 +98,23 @@
 
             <div class="row bookmarks">
                 <div class="col-xs-12">
-                    <div class="panel panel-default" ng-repeat="bookmark in bookmarks">
+                    <div ng-if="bookmarks.length > 0 && !error" class="panel panel-default" ng-repeat="bookmark in bookmarks">
                         <div class="panel-heading">
                             <h3 class="panel-title"><a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a></h3>
                             <small class="text-success">{{ bookmark.url }}</small>
                         </div>
                         <div class="panel-body">
-                            <small><em>{{ bookmark.created|date:'mediumDate' }}</em> &mdash; <a href ng-click="edit(bookmark)">Edit</a> <a href ng-click="delete(bookmark, $index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</small>
+                            <small><em>{{ bookmark.created|date:'mediumDate' }}</em> &mdash; <a href ng-click="edit(bookmark)">Edit</a> | <a href ng-click="delete(bookmark, $index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</small>
+                        </div>
+                    </div>
+                    <div ng-if="noResults && !error">
+                        <div class="alert alert-warning" role="alert">
+                            <p><span class="glyphicon glyphicon-warning-sign"></span> <b>Oops!</b> Nothing matches your search query</p>
+                        </div>
+                    </div>
+                    <div ng-if="error">
+                        <div class="alert alert-danger" role="alert">
+                            <span class="glyphicon glyphicon-warning-sign"></span> <b>Oops!</b> {{ error.status }} {{ error.statusText }}
                         </div>
                     </div>
                 </div>
