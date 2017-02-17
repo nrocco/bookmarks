@@ -1,10 +1,16 @@
 FROM mhart/alpine-node:7
 
-RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
-COPY package.json /usr/src/app/
+
+RUN addgroup -S bmarks && \
+    adduser -s /bin/false -D -S -h /usr/src/app -G bmarks bmarks
+
+USER bmarks
+
+COPY index.js schema.sql package.json /usr/src/app/
+COPY public /usr/src/app/public/
+
 RUN npm install
-COPY . /usr/src/app
 
 EXPOSE 5000
 
