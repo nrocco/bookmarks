@@ -1,124 +1,148 @@
-<!doctype html>
-<html class="no-js">
+<!DOCTYPE html>
+<html>
     <head>
-        <base href="/">
+        <title>Bookmarks</title>
         <meta charset="utf-8">
-        <title update-title>Bookmarks</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <link rel="search" type="application/opensearchdescription+xml" href="/osd.xml" title="Bookmarks" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha256-916EbMg70RQy9LHiGkXzG8hSg9EdNy97GazNG/aiY1w=" crossorigin="anonymous" />
-        <style>
-            .container {
-                padding-top: 15px;
+        <script src="https://unpkg.com/vue/dist/vue.js"></script>
+        <script src="https://cdn.jsdelivr.net/vue.resource/1.2.1/vue-resource.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/lodash/4.13.1/lodash.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.3/js.cookie.min.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+        <style type="text/css">
+            #app {
+                padding-top: 20px;
+                font-family: 'Avenir', Helvetica, Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                color: #2c3e50;
             }
-            .bookmarks .panel-heading h3 {
-                line-height: 1.4;
+            .bookmarks .card {
+                margin-bottom: 20px;
+            }
+            .bookmarks .card-header h4 {
+                margin-bottom: 0;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 overflow: hidden;
+                font-size: 1rem;
             }
-            .bookmarks .panel-heading small {
+            .bookmarks .card-header small {
                 display: block;
                 text-overflow: ellipsis;
                 white-space: nowrap;
                 overflow: hidden;
+                font-size: 0.9rem;
+            }
+            .bookmarks .card-block {
+                font-size: 0.9rem;
             }
         </style>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular.min.js" integrity="sha256-3SrLjPeRPa1ofM280r+OMcUjJZKLWJHr6SRtRu3dRb0=" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-aria.min.js" integrity="sha256-WG9c4D8qii9qZEV68/+lQWGPp/lue+lc6FJMVvBvsp0=" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-animate.min.js" integrity="sha256-0cps7Hwgg5cOZLjr8j/aCWpsjxmn6orzBvfSsKZ91Qo=" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-touch.min.js" integrity="sha256-KueV4js581pLp3tYKpdkjEI5NA/XFL7sNnhoPBmfdOE=" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-cookies.min.js" integrity="sha256-Sh+526blLfC5LBGAW5B+wUTurrM+xnSYW7ZOLZ4TLlI=" crossorigin="anonymous"></script>
-        <script type="text/javascript">
-            var app = angular.module("app", ['ngCookies']);
-            app.config(function($locationProvider) {
-                $locationProvider.html5Mode(true);
-            });
-            app.controller("MainController", ['$scope', '$http', '$cookies', '$window', '$location', function($scope, $http, $cookies, $window, $location) {
-                $scope.search = $location.search()['search'];
-                $scope.loggedIn = (typeof $cookies.get('secret') !== 'undefined');
-
-                $scope.login = function() {
-                    $cookies.put('secret', $scope.search, {expires: new Date(new Date().setFullYear(new Date().getFullYear() + 1))});
-                    $scope.loggedIn = true;
-                    $scope.search = null;
-                    $scope.getBookmarks();
-                };
-
-                $scope.logout = function() {
-                    $cookies.remove('secret');
-                    $scope.loggedIn = false;
-                    $scope.bookmarks = [];
-                };
-
-                $scope.getBookmarks = function() {
-                    $scope.bookmarks = [];
-                    $scope.error = undefined
-
-                    var payload = {};
-                    if ($scope.search) {
-                        payload.q = $scope.search;
-                    }
-                    $http.get('/bookmarks', {params: payload}).then(function (response) {
-                        $scope.bookmarks = response.data;
-                        $scope.noResults = (response.data.length === 0);
-                    }, function (response) {
-                        $scope.error = response;
-                    });
-                };
-
-                $scope.delete = function (bookmark, index) {
-                    if ($window.confirm("Are you sure you want to delete this bookmark?")) {
-                        $http.delete('/bookmarks/'+bookmark.id).then(function (response) {
-                            $scope.bookmarks.splice(index, 1);
-                        });
-                    }
-                };
-            }]);
-        </script>
     </head>
-    <body ng-app="app" ng-controller="MainController">
-        <div class="container">
-            <div class="row">
-                <div class="col-xs-12">
-                    <form ng-submit="getBookmarks()" ng-init="getBookmarks()">
+
+    <body>
+        <div id="app">
+            <div class="container-fluid" v-if="!authenticated">
+                <div class="row justify-content-md-center">
+                    <div class="col col-md-6">
                         <div class="input-group">
-                            <input type="text" class="form-control" placeholder="Search bookmarks" ng-model="search" autofocus>
+                            <input type="text" class="form-control" placeholder="Secret token" v-on:keyup.enter="login()" v-model="secret" autofocus>
                             <span class="input-group-btn">
-                                <button class="btn btn-primary" type="submit" >Go</button>
-                                <button class="btn btn-danger" type="button" ng-click="logout()" ng-if="loggedIn">Logout</button>
-                                <button class="btn btn-success" type="button" ng-click="login()" ng-if="!loggedIn">Login</button>
+                                <button class="btn btn-success" type="button" v-on:click.once="login()">Login</button>
                             </span>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
-
-            <hr />
-
-            <div class="row bookmarks">
-                <div class="col-xs-12">
-                    <div ng-if="bookmarks.length > 0 && !error" class="panel panel-default" ng-repeat="bookmark in bookmarks">
-                        <div class="panel-heading">
-                            <h3 class="panel-title"><a ng-href="{{ bookmark.url }}">{{ bookmark.name }}</a></h3>
-                            <small class="text-success">{{ bookmark.url }}</small>
-                        </div>
-                        <div class="panel-body">
-                            <small><em>{{ bookmark.created|date:'mediumDate' }}</em> &mdash; <a href ng-click="edit(bookmark)">Edit</a> | <a href ng-click="delete(bookmark, $index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</small>
-                        </div>
+            <div class="container-fluid" v-if="authenticated">
+                <div class="row">
+                    <div class="col">
+                        <input type="text" class="form-control" placeholder="Search bookmarks" v-model="search" v-bind:value="search"autofocus>
                     </div>
-                    <div ng-if="noResults && !error">
-                        <div class="alert alert-warning" role="alert">
-                            <p><span class="glyphicon glyphicon-warning-sign"></span> <b>Oops!</b> Nothing matches your search query</p>
-                        </div>
-                    </div>
-                    <div ng-if="error">
-                        <div class="alert alert-danger" role="alert">
-                            <span class="glyphicon glyphicon-warning-sign"></span> <b>Oops!</b> {{ error.status }} {{ error.statusText }}
+                </div>
+
+                <hr />
+
+                <div class="row bookmarks">
+                    <div class="col">
+                        <div class="card" v-for="(bookmark, index) in bookmarks">
+                            <div class="card-header">
+                                <h4><a v-bind:href="bookmark.url">{{ bookmark.name }}</a></h4>
+                                <small class="text-success">{{ bookmark.url }}</small>
+                            </div>
+                            <div class="card-block">
+                                <p class="card-text"><em>{{ bookmark.created }}</em> &mdash; <a href>Edit</a> | <a href v-on:click.prevent="deleteBookmark(bookmark, index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <script>
+            function getParamValuesByName (querystring) {
+                var qstring = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+                for (var i = 0; i < qstring.length; i++) {
+                    var urlparam = qstring[i].split('=');
+                    if (urlparam[0] == querystring) {
+                        return urlparam[1];
+                    }
+                }
+            };
+
+            new Vue({
+                el: '#app',
+                data: {
+                    search: "",
+                    authenticated: false,
+                    secret: undefined,
+                    bookmarks: [],
+                },
+                created: function() {
+                    this.authenticated = Cookies.get('secret') !== undefined;
+                    this.search = getParamValuesByName('search');
+                },
+                methods: {
+                    login: function() {
+                        Cookies.set('secret', this.secret, { expires: 365 });
+                        this.authenticated = true;
+                    },
+                    logout: function() {
+                        Cookies.remove('secret');
+                        this.authenticated = false;
+                    },
+                    fetchBookmarks: _.debounce(function() {
+                        if (!this.authenticated) {
+                            return;
+                        }
+                        this.$http.get('bookmarks', {params:{q:this.search}}).then(function(response) {
+                            this.bookmarks = response.body;
+                        }, function (response) {
+                            if (response.status === 401) {
+                                this.logout();
+                            }
+                        });
+                    }, 500),
+                    deleteBookmark: function(bookmark, index) {
+                        if (window.confirm("Are you sure you want to delete this bookmark?")) {
+                            this.$http.delete('bookmarks/'+bookmark.id).then(function (response) {
+                                this.bookmarks.splice(index, 1);
+                            });
+                        }
+                    },
+                },
+                watch: {
+                    search: function (value) {
+                        this.fetchBookmarks();
+                    },
+                    authenticated: function (value) {
+                        if (value) {
+                            this.fetchBookmarks();
+                        } else {
+                            this.bookmarks = [];
+                        }
+                    }
+                }
+            });
+        </script>
     </body>
 </html>
