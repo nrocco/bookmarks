@@ -4,11 +4,13 @@
         <title>Bookmarks</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://unpkg.com/vue/dist/vue.js"></script>
-        <script src="https://cdn.jsdelivr.net/vue.resource/1.2.1/vue-resource.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/lodash/4.13.1/lodash.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.3/js.cookie.min.js"></script>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.3.4/vue.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/1.3.4/vue-resource.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.4/js.cookie.min.js"></script>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
+
         <style type="text/css">
             #app {
                 padding-top: 20px;
@@ -19,6 +21,8 @@
             }
             .bookmarks .card {
                 margin-bottom: 20px;
+                max-height: 300px;
+                overflow-y: hidden;
             }
             .bookmarks .card-header h4 {
                 margin-bottom: 0;
@@ -67,11 +71,11 @@
                     <div class="col">
                         <div class="card" v-for="(bookmark, index) in bookmarks">
                             <div class="card-header">
-                                <h4><a v-bind:href="bookmark.url">{{ bookmark.name }}</a></h4>
-                                <small class="text-success">{{ bookmark.url }}</small>
+                                <h4><a v-bind:href="bookmark.URL">{{ bookmark.Title }}</a></h4>
+                                <small class="text-success">{{ bookmark.URL }}</small>
                             </div>
                             <div class="card-block">
-                                <p class="card-text"><em>{{ bookmark.created }}</em> &mdash; <a href>Edit</a> | <a href v-on:click.prevent="deleteBookmark(bookmark, index)">Delete</a> &mdash; {{ bookmark.excerpt }}&hellip;</p>
+                                <p class="card-text"><em>{{ bookmark.CreatedAt }}</em> &mdash; <a href>Edit</a> | <a href v-on:click.prevent="deleteBookmark(bookmark, index)">Delete</a><p v-html="bookmark.Content"></p></p>
                             </div>
                         </div>
                     </div>
@@ -99,23 +103,23 @@
                     bookmarks: [],
                 },
                 created: function() {
-                    this.authenticated = Cookies.get('secret') !== undefined;
+                    this.authenticated = Cookies.get('TOKEN') !== undefined;
                     this.search = getParamValuesByName('search');
                 },
                 methods: {
                     login: function() {
-                        Cookies.set('secret', this.secret, { expires: 365 });
+                        Cookies.set('TOKEN', this.secret, { expires: 365 });
                         this.authenticated = true;
                     },
                     logout: function() {
-                        Cookies.remove('secret');
+                        Cookies.remove('TOKEN');
                         this.authenticated = false;
                     },
                     fetchBookmarks: _.debounce(function() {
                         if (!this.authenticated) {
                             return;
                         }
-                        this.$http.get('bookmarks', {params:{q:this.search}}).then(function(response) {
+                        this.$http.get('bookmarks', {params:{search:this.search}}).then(function(response) {
                             this.bookmarks = response.body;
                         }, function (response) {
                             if (response.status === 401) {
@@ -125,7 +129,7 @@
                     }, 500),
                     deleteBookmark: function(bookmark, index) {
                         if (window.confirm("Are you sure you want to delete this bookmark?")) {
-                            this.$http.delete('bookmarks/'+bookmark.id).then(function (response) {
+                            this.$http.delete('bookmarks/'+bookmark.ID).then(function (response) {
                                 this.bookmarks.splice(index, 1);
                             });
                         }
