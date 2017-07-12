@@ -21,12 +21,16 @@ var (
 
 	// Name stores the value for the --db-name option
 	Name = flag.String("db-name", "bookmarks", "The name of the database to connect to")
+
+	Secret = flag.String("secret", "secret", "The secret hash to authenticate to the api")
 )
 
 func main() {
 	flag.Parse()
 
-	app := server.App{}
+	app := server.App{
+		Secret: *Secret,
+	}
 	app.Initialize(*Host, *User, *Pass, *Name)
 
 	if err := app.Run(*HTTPAddr); err != nil {

@@ -14,6 +14,7 @@ import (
 type App struct {
 	Router   http.Handler
 	Database *gorm.DB
+	Secret   string
 }
 
 // Initialize opens a database connection and sets up the http routes and handler functions
@@ -39,7 +40,7 @@ func (app *App) Initialize(host, user, password, dbname string) error {
 	router.HandleFunc("/bookmarks/{id}", app.deleteHandler).Methods("DELETE")
 	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("public/"))))
 
-	app.Router = logger(authorizer(router))
+	app.Router = logger(app.authorizer(router))
 
 	return nil
 }
@@ -49,11 +50,11 @@ func (app *App) Run(addr string) error {
 	return http.ListenAndServe(addr, app.Router)
 }
 
-func authorizer(inner http.Handler) http.Handler {
+func (app *App) authorizer(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("TOKEN")
 
-		if err == nil && cookie.Value == "9f9df98f9d8f9d8f9djshdjsdhsjdksjdksd" {
+		if err == nil && cookie.Value == app.Secret {
 			inner.ServeHTTP(w, r)
 			return
 		}

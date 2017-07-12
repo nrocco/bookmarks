@@ -1,17 +1,15 @@
-FROM mhart/alpine-node:7
+FROM golang:1.9 AS builder
+WORKDIR /go/src/github.com/nrocco/bookmarks
+COPY Gopkg.lock Gopkg.toml ./
+COPY pkg ./pkg
+COPY cmd ./cmd
+RUN go get -u github.com/golang/dep/cmd/dep && dep ensure
+ENV CGO_ENABLED=0
+RUN go build -a -tags netgo -installsuffix netgo -ldflags "-d -s -w" -o build/bookmarks github.com/nrocco/bookmarks/cmd/bookmarks
 
-WORKDIR /usr/src/app
-
-RUN addgroup -S bmarks && \
-    adduser -s /bin/false -D -S -h /usr/src/app -G bmarks bmarks
-
-USER bmarks
-
-COPY index.js schema.sql package.json /usr/src/app/
-COPY public /usr/src/app/public/
-
-RUN npm install
-
-EXPOSE 5000
-
-CMD [ "node", "index.js" ]
+FROM scratch
+WORKDIR /app
+COPY --from=builder /go/src/github.com/nrocco/bookmarks/build/bookmarks /app
+COPY public /app/public/
+EXPOSE 8000
+CMD ["/app/bookmarks"]
