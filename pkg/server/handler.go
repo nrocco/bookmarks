@@ -79,11 +79,12 @@ func (app *App) addHandler(w http.ResponseWriter, r *http.Request) {
 		Title: bookmarkTitle,
 	}
 
-	app.Database.Create(&bookmark)
-
-	if bookmark.ID == 0 {
-		respondWithError(w, http.StatusBadRequest, "Bookmark could not be persisted")
-		return
+	if createErr := app.database.Create(&bookmark).Error; createErr != nil {
+		pgErr := createErr.(*pq.Error)
+		if pgErr.Code != "23505" {
+			respondWithError(w, http.StatusBadRequest, "")
+			return
+		}
 	}
 
 	go app.fetchContentForBookmark(bookmark.ID)
