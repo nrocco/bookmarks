@@ -103,16 +103,16 @@
                     bookmarks: [],
                 },
                 created: function() {
-                    this.authenticated = Cookies.get('TOKEN') !== undefined;
+                    this.authenticated = Cookies.get('secret') !== undefined;
                     this.search = getParamValuesByName('search');
                 },
                 methods: {
                     login: function() {
-                        Cookies.set('TOKEN', this.secret, { expires: 365 });
+                        Cookies.set('secret', this.secret, { expires: 365 });
                         this.authenticated = true;
                     },
                     logout: function() {
-                        Cookies.remove('TOKEN');
+                        Cookies.remove('secret');
                         this.authenticated = false;
                     },
                     fetchBookmarks: _.debounce(function() {
