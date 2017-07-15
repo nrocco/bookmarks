@@ -54,7 +54,7 @@ func (app *App) Run(addr string) error {
 
 func (app *App) authorizer(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("TOKEN")
+		cookie, err := r.Cookie("secret")
 
 		if err == nil && cookie.Value == app.Secret {
 			inner.ServeHTTP(w, r)
