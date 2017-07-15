@@ -85,11 +85,11 @@ func (app *App) addHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, "")
 			return
 		}
-
-		respondWithError(w, http.StatusBadRequest, "Bookmark could not be persisted")
 	}
 
-	go app.fetchContentForBookmark(bookmark.ID)
+	if bookmark.ID != 0 {
+		go app.fetchContentForBookmark(bookmark.ID)
+	}
 
 	http.Redirect(w, r, bookmark.URL, http.StatusSeeOther)
 }
