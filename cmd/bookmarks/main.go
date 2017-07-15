@@ -31,9 +31,12 @@ func main() {
 	app := server.App{
 		Secret: *Secret,
 	}
-	app.Initialize(*Host, *User, *Pass, *Name)
+
+	if err := app.Initialize(*Host, *User, *Pass, *Name); err != nil {
+		log.Fatal(err.Error())
+	}
 
 	if err := app.Run(*HTTPAddr); err != nil {
-		log.Println(err.Error())
+		log.Fatal(err.Error())
 	}
 }

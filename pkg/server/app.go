@@ -19,7 +19,7 @@ type App struct {
 
 // Initialize opens a database connection and sets up the http routes and handler functions
 func (app *App) Initialize(host, user, password, dbname string) error {
-	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, password, dbname)
+	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s", host, user, password, dbname)
 
 	var err error
 	app.Database, err = gorm.Open("postgres", connectionString)
