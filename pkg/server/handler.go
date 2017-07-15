@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -30,7 +31,7 @@ func (app *App) listHandler(w http.ResponseWriter, r *http.Request) {
 
 	bookmarks := []Bookmark{}
 
-	query := app.Database.Limit(limit).Offset(offset).Order("created_at desc")
+	query := app.database.Limit(limit).Offset(offset).Order("created_at desc")
 
 	if search != "" {
 		query = query.Where("bookmarks.fts @@ to_tsquery(?)", search)
@@ -51,7 +52,7 @@ func (app *App) createHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	app.Database.Create(&bookmark)
+	app.database.Create(&bookmark)
 
 	if bookmark.ID == 0 {
 		respondWithError(w, http.StatusBadRequest, "Bookmark could not be persisted")
@@ -95,7 +96,7 @@ func (app *App) readHandler(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	bookmark := Bookmark{}
 
-	app.Database.Find(&bookmark, id)
+	app.database.Find(&bookmark, id)
 
 	if bookmark.ID == 0 {
 		respondWithJSON(w, http.StatusNotFound, nil)
@@ -110,7 +111,7 @@ func (app *App) readContentHandler(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	bookmark := Bookmark{}
 
-	app.Database.Find(&bookmark, id)
+	app.database.Find(&bookmark, id)
 
 	if bookmark.ID == 0 {
 		respondWithJSON(w, http.StatusNotFound, nil)
@@ -126,10 +127,10 @@ func (app *App) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	bookmark := Bookmark{}
 
-	app.Database.Find(&bookmark, id)
+	app.database.Find(&bookmark, id)
 
 	if bookmark.ID != 0 {
-		app.Database.Delete(&bookmark)
+		app.database.Delete(&bookmark)
 	}
 
 	respondWithJSON(w, http.StatusNoContent, nil)
@@ -151,11 +152,11 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 func (app *App) fetchContentForBookmark(id uint) {
 	bookmark := Bookmark{}
-	app.Database.Find(&bookmark, id)
+	app.database.Find(&bookmark, id)
 
 	content, _ := FetchContent(bookmark.URL)
 
 	bookmark.Content = content
 
-	app.Database.Save(&bookmark)
+	app.database.Save(&bookmark)
 }

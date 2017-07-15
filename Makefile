@@ -40,4 +40,4 @@ public/favicon.ico:
 	convert public/apple-touch-icon.png -define icon:auto-resize=64,48,32,16 public/favicon.ico
 
 test-server:
-	go run cmd/bookmarks/main.go
+	go run cmd/bookmarks/main.go --database 'postgres://postgres:secret@localhost/bookmarks?sslmode=disable'

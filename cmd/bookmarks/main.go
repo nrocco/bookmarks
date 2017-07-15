@@ -10,30 +10,19 @@ var (
 	// HTTPAddr stores the value for the --http option and defaults to 0.0.0.0:8000
 	HTTPAddr = flag.String("http", "0.0.0.0:8000", "Address to listen for HTTP requests on")
 
-	// Host stores the value for the --db-host option
-	Host = flag.String("db-host", "localhost", "The host of the database server to connect to")
+	// Database holds the connection string for the database connection
+	Database = flag.String("database", "", "The connection string of the database server")
 
-	// User stores the value for the --db-user option
-	User = flag.String("db-user", "postgres", "The username of the database server to connect to")
-
-	// Pass stores the value for the --db-pass option
-	Pass = flag.String("db-pass", "secret", "The password of the database server to connect to")
-
-	// Name stores the value for the --db-name option
-	Name = flag.String("db-name", "bookmarks", "The name of the database to connect to")
-
-	Secret = flag.String("secret", "secret", "The secret hash to authenticate to the api")
+	// Secret is the value
+	Secret = flag.String("secret", "", "The secret hash to authenticate to the api")
 )
 
 func main() {
 	flag.Parse()
 
 	app := server.App{
-		Secret: *Secret,
-	}
-
-	if err := app.Initialize(*Host, *User, *Pass, *Name); err != nil {
-		log.Fatal(err.Error())
+		Secret:           *Secret,
+		ConnectionString: *Database,
 	}
 
 	if err := app.Run(*HTTPAddr); err != nil {
