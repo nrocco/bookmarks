@@ -11,5 +11,6 @@ FROM scratch
 WORKDIR /app
 COPY --from=builder /go/src/github.com/nrocco/bookmarks/build/bookmarks /app
 COPY public /app/public/
+ADD ca-certificates.crt /etc/ssl/certs/
 EXPOSE 8000
 CMD ["/app/bookmarks"]

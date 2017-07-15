@@ -157,9 +157,12 @@ func (app *App) fetchContentForBookmark(id uint) {
 	bookmark := Bookmark{}
 	app.database.Find(&bookmark, id)
 
-	content, _ := FetchContent(bookmark.URL)
-
-	bookmark.Content = content
+	content, err := FetchContent(bookmark.URL)
+	if err != nil {
+		bookmark.Content = err.Error()
+	} else {
+		bookmark.Content = content
+	}
 
 	app.database.Save(&bookmark)
 }
