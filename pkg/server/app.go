@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+	"github.com/urfave/negroni"
 	"net/http"
 
 	// postgres is the only supported database backend
@@ -31,7 +32,7 @@ func (app *App) Run(addr string) error {
 
 	router := mux.NewRouter()
 
-	apiRouter := router.PathPrefix("/bookmarks").Subrouter()
+	apiRouter := mux.NewRouter().PathPrefix("/bookmarks").Subrouter()
 	apiRouter.HandleFunc("", app.listHandler).Methods("GET")
 	apiRouter.HandleFunc("", app.createHandler).Methods("POST")
 	apiRouter.HandleFunc("/add", app.addHandler).Methods("GET")
@@ -39,28 +40,19 @@ func (app *App) Run(addr string) error {
 	apiRouter.HandleFunc("/{id}/content", app.readContentHandler).Methods("GET")
 	apiRouter.HandleFunc("/{id}", app.deleteHandler).Methods("DELETE")
 
-	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("public/"))))
-
-	var handler http.Handler
+	apiMiddleware := negroni.New(negroni.HandlerFunc(LoggerMiddleware))
 
 	if app.Secret != "" {
-		handler = logger(app.authorizer(router))
-	} else {
-		handler = logger(router)
+		apiMiddleware.Use(negroni.HandlerFunc(app.AuthorizationMiddleware))
 	}
 
-	return http.ListenAndServe(addr, handler)
-}
+	apiMiddleware.Use(negroni.Wrap(apiRouter))
 
-func (app *App) authorizer(inner http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("secret")
+	router.PathPrefix("/bookmarks").Handler(apiMiddleware)
+	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("public/"))))
 
-		if err == nil && cookie.Value == app.Secret {
-			inner.ServeHTTP(w, r)
-			return
-		}
+	n := negroni.New()
+	n.UseHandler(router)
 
-		w.WriteHeader(http.StatusUnauthorized)
-	})
+	return http.ListenAndServe(addr, n)
 }

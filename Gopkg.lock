@@ -50,14 +50,20 @@
   revision = "2f30b1a346f19ddab94ffe0cb788331be9399de2"
 
 [[projects]]
+  name = "github.com/urfave/negroni"
+  packages = ["."]
+  revision = "fde5e16d32adc7ad637e9cd9ad21d4ebc6192535"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["html","html/atom"]
-  revision = "054b33e6527139ad5b1ec2f6232c3b175bd9a30c"
+  revision = "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0d1ac0e70d413bbcfab64afb1c82dcf6047ad3fc2b1c2154dfb72aae9b2374c6"
+  inputs-digest = "bb60bee144887d78072022cbd8b427d89ee1e0347ec3f8121263aa5221feafc8"
   solver-name = "gps-cdcl"
   solver-version = 1
