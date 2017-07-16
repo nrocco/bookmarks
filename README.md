@@ -35,6 +35,12 @@ Alernatively you can use the docker container:
     $ docker run -p 8000:8000 nrocco/bookmarks -database "postgres://xxxxxxx"
 
 
+Bookmarklet
+-----------
+
+    javascript:(function()%7Blocation.href=%22http://0.0.0.0/bookmarks/add?url=%22+encodeURIComponent(location.href)+%22&title=%22+encodeURIComponent(document.title);%7D)()
+
+
 Contributing
 ------------
 
