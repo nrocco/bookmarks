@@ -26,6 +26,8 @@ func (app *App) Run(addr string) error {
 		return err
 	}
 
+	defer app.database.Close()
+
 	app.database.AutoMigrate(&Bookmark{})
 	// TODO CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE ON bookmarks FOR EACH ROW EXECUTE PROCEDURE tsvector_update_trigger(fts, 'pg_catalog.english', content);
 	// TODO CREATE INDEX bookmarks_fts_idx ON bookmarks USING gin(fts);
