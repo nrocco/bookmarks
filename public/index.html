@@ -21,8 +21,6 @@
             }
             .bookmarks .card {
                 margin-bottom: 20px;
-                max-height: 300px;
-                overflow-y: hidden;
             }
             .bookmarks .card-header h4 {
                 margin-bottom: 0;
@@ -40,6 +38,14 @@
             }
             .bookmarks .card-block {
                 font-size: 0.9rem;
+            }
+            .bookmarks .card-text {
+                font-size: 0.8rem;
+                line-height: 1.6em;
+                max-height: 4.8em;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-wrap: break-word;
             }
         </style>
     </head>
@@ -75,7 +81,8 @@
                                 <small class="text-success">{{ bookmark.URL }}</small>
                             </div>
                             <div class="card-block">
-                                <p class="card-text"><em>{{ bookmark.CreatedAt }}</em> &mdash; <a href>Edit</a> | <a href v-on:click.prevent="deleteBookmark(bookmark, index)">Delete</a><p v-html="bookmark.Content"></p></p>
+                                <p><em>{{ bookmark.CreatedAt }}</em> &mdash; <a href v-on:click.prevent="deleteBookmark(bookmark, index)">Delete</a></p>
+                                <p class="card-text" v-html="bookmark.Content"></p>
                             </div>
                         </div>
                     </div>
