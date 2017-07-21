@@ -20,7 +20,7 @@ var (
 func main() {
 	flag.Parse()
 
-	app := server.App{
+	app := &server.App{
 		Secret:           *Secret,
 		ConnectionString: *Database,
 	}

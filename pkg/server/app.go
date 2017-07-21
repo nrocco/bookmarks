@@ -26,6 +26,9 @@ func (app *App) Run(addr string) error {
 		return err
 	}
 
+	// Make sure that idle connections are cleaned up.
+	app.database.DB().SetMaxIdleConns(0)
+
 	defer app.database.Close()
 
 	app.database.AutoMigrate(&Bookmark{})
