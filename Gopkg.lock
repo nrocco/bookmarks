@@ -26,6 +26,12 @@
   version = "v1.4.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/gorilla/schema"
+  packages = ["."]
+  revision = "8b1100835db5bbdae88541510f70d114b91a7e4d"
+
+[[projects]]
   name = "github.com/jinzhu/gorm"
   packages = [".","dialects/postgres"]
   revision = "5174cc5c242a728b435ea2be8a2f7f998e15429b"
@@ -64,6 +70,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb60bee144887d78072022cbd8b427d89ee1e0347ec3f8121263aa5221feafc8"
+  inputs-digest = "ca952eb25cb1d2784a8a0e25cca43dfc23d1cb07869901a19c593f8e941b90e4"
   solver-name = "gps-cdcl"
   solver-version = 1

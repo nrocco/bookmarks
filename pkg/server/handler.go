@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"github.com/lib/pq"
 	"net/http"
 	"net/url"
@@ -11,7 +12,34 @@ import (
 	"strings"
 )
 
+type BookmarkFilter struct {
+	Limit  int
+	Offset int
+	Search string
+}
+
+func NewBookmarkFilter(params url.Values) *BookmarkFilter {
+	filter := &BookmarkFilter{}
+
+	decoder := schema.NewDecoder()
+	err := decoder.Decode(filter, params)
+	if err != nil {
+		return filter
+	}
+
+	return filter
+}
+
 func (app *App) listHandler(w http.ResponseWriter, r *http.Request) {
+	fuuErr := r.ParseForm()
+	if fuuErr != nil {
+		fmt.Println(fuuErr)
+	}
+
+	filters := NewBookmarkFilter(r.Form)
+
+	fmt.Printf("BookmarkFilter: %v\n", filters)
+
 	limit, _ := strconv.Atoi(r.FormValue("limit"))
 	offset, _ := strconv.Atoi(r.FormValue("offset"))
 	search := r.FormValue("search")

@@ -1,6 +1,10 @@
 bookmarks
 =========
 
+*DEPRECATED*: I am no longer mainting this self hosted bookmarks application.
+I am using the awesome [wallabag project](https://www.wallabag.org/en).
+If you are interested how I deployed it have a look [here](https://github.com/nrocco/wallabag-docker)
+
 Personal zero-touch bookmarking app in the cloud, with full text search support.
 
 
