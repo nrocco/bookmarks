@@ -1,0 +1,64 @@
+{{ define "base.tmpl" }}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ template "title" . }} | Bookmarks</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+    <style>
+      .bookmark {
+        margin-top: 24px;
+      }
+      .actions {
+        margin-top: 16px;
+      }
+      .b-content {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero is-bold {{ template "color" . }}">
+      <div class="hero-body">
+        <div class="container">
+          <h1 class="title">{{ template "title" . }}</h1>
+          <h2 class="subtitle">{{ template "subtitle" . }}</h2>
+        </div>
+      </div>
+      <div class="hero-foot">
+        <nav class="tabs is-boxed is-right">
+          <div class="container">
+            <ul>
+              <li {{ if eq $.Request.URL.Path "/" }}class="is-active"{{ end }}><a href="/">Read it later</a></li>
+              <li {{ if eq $.Request.URL.Path "/archive" }}class="is-active"{{ end }}><a href="/archive">Archive</a></li>
+              <li {{ if eq $.Request.URL.Path "/feeds" }}class="is-active"{{ end }}><a href="/feeds">Feeds</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        {{ template "content" . }}
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="content">
+          <code>javascript:(function(){window.location = 'http://{{ $.Request.Host }}/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</code>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+{{ end }}
+{{ define "title" }}{{ end }}
+{{ define "subtitle" }}{{ end }}
+{{ define "content" }}{{ end }}

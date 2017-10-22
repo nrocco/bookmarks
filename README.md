@@ -1,10 +1,6 @@
 bookmarks
 =========
 
-*DEPRECATED*: I am no longer mainting this self hosted bookmarks application.
-I am using the awesome [wallabag project](https://www.wallabag.org/en).
-If you are interested how I deployed it have a look [here](https://github.com/nrocco/wallabag-docker)
-
 Personal zero-touch bookmarking app in the cloud, with full text search support.
 
 
@@ -21,14 +17,7 @@ Then compile
 
 Now you can run bookmarks server:
 
-    $ build/bookmarks -help
-    Usage of build/bookmarks:
-      -database string
-            The connection string of the database server
-      -http string
-            Address to listen for HTTP requests on (default "0.0.0.0:8000")
-      -secret string
-            The secret hash to authenticate to the api
+    $ build/bookmarks-darwin-amd64
 
 
 Usage
@@ -36,13 +25,7 @@ Usage
 
 Alernatively you can use the docker container:
 
-    $ docker run -p 8000:8000 nrocco/bookmarks -database "postgres://xxxxxxx"
-
-
-Bookmarklet
------------
-
-    javascript:(function()%7Blocation.href=%22http://0.0.0.0/bookmarks/add?url=%22+encodeURIComponent(location.href)+%22&title=%22+encodeURIComponent(document.title);%7D)()
+    $ docker run -p 3000:3000 nrocco/bookmarks
 
 
 Contributing

@@ -3,7 +3,7 @@
     <ShortName>Bookmarks</ShortName>
     <Description>Search Bookmarks.</Description>
     <Image width="16" height="16" type="image/x-icon">/apple-touch-icon.png</Image>
-    <Url method="get" rel="results" type="text/html" template="/?search={searchTerms}" />
+    <Url method="get" rel="results" type="text/html" template="/?q={searchTerms}" />
     <Url rel="self" type="application/opensearchdescription+xml" template="/osd.xml" />
     <Language>en</Language>
     <InputEncoding>UTF-8</InputEncoding>

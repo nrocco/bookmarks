@@ -1,63 +1,65 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
-	"github.com/urfave/negroni"
 	"net/http"
+	"time"
 
-	// postgres is the only supported database backend
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/nrocco/bookmarks/qb"
+
+	// We assume sqlite
+	_ "github.com/mattn/go-sqlite3"
 )
 
-// App represents the bookmark server application and binds the Router and the Database together
-type App struct {
-	database         *gorm.DB
-	Secret           string
-	ConnectionString string
-}
+//go:generate go-bindata -pkg server -o bindata.go bindata templates/...
 
-// Initialize opens a database connection and sets up the http routes and handler functions
-func (app *App) Run(addr string) error {
+var (
+	database *qb.DB
+)
+
+func Start(file string, address string) error {
 	var err error
 
-	app.database, err = gorm.Open("postgres", app.ConnectionString)
+	database, err = qb.Open(file)
 	if err != nil {
 		return err
 	}
 
-	// Make sure that idle connections are cleaned up.
-	app.database.DB().SetMaxIdleConns(0)
-
-	defer app.database.Close()
-
-	app.database.AutoMigrate(&Bookmark{})
-	// TODO CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE ON bookmarks FOR EACH ROW EXECUTE PROCEDURE tsvector_update_trigger(fts, 'pg_catalog.english', content);
-	// TODO CREATE INDEX bookmarks_fts_idx ON bookmarks USING gin(fts);
-
-	router := mux.NewRouter()
-
-	apiRouter := mux.NewRouter().PathPrefix("/bookmarks").Subrouter()
-	apiRouter.HandleFunc("", app.listHandler).Methods("GET")
-	apiRouter.HandleFunc("", app.createHandler).Methods("POST")
-	apiRouter.HandleFunc("/add", app.addHandler).Methods("GET")
-	apiRouter.HandleFunc("/{id}", app.readHandler).Methods("GET")
-	apiRouter.HandleFunc("/{id}/content", app.readContentHandler).Methods("GET")
-	apiRouter.HandleFunc("/{id}", app.deleteHandler).Methods("DELETE")
-
-	apiMiddleware := negroni.New(negroni.HandlerFunc(LoggerMiddleware))
-
-	if app.Secret != "" {
-		apiMiddleware.Use(negroni.HandlerFunc(app.AuthorizationMiddleware))
+	if _, err = database.Exec(schema); err != nil {
+		return err
 	}
 
-	apiMiddleware.Use(negroni.Wrap(apiRouter))
+	r := chi.NewRouter()
 
-	router.PathPrefix("/bookmarks").Handler(apiMiddleware)
-	router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("public/"))))
+	// A good base middleware stack
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
 
-	n := negroni.New()
-	n.UseHandler(router)
+	r.Get("/", listBookmarks)
+	r.Get("/archive", listBookmarks)
+	r.Get("/save", saveBookmark)
+	r.Get("/feeds", listFeeds)
+	r.Get("/{id}/archive", archiveBookmark)
+	r.Get("/{id}/readitlater", readitlaterBookmark)
+	r.Get("/{id}/delete", deleteBookmark)
 
-	return http.ListenAndServe(addr, n)
+	r.Get("/apple-touch-icon.png", staticAsset)
+	r.Get("/favicon.ico", staticAsset)
+	r.Get("/osd.xml", staticAsset)
+
+	return http.ListenAndServe(address, r)
+}
+
+func staticAsset(w http.ResponseWriter, r *http.Request) {
+	contents, err := Asset("bindata" + r.URL.Path)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Write(contents)
 }

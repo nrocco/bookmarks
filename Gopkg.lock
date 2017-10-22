@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/JalfResi/justext"
+  packages = ["."]
+  revision = "c0282dea71984da06b2f154dcd2b06da3948aa06"
+
+[[projects]]
   name = "github.com/PuerkitoBio/goquery"
   packages = ["."]
   revision = "e1271ee34c6a305e38566ecd27ae374944907ee9"
@@ -14,62 +20,74 @@
   revision = "349dd0209470eabd9514242c688c403c0926d266"
 
 [[projects]]
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  revision = "bcd8bc72b08df0f70df986b97f95590779502d31"
-  version = "v1.4.0"
+  name = "github.com/go-chi/chi"
+  packages = [".","middleware"]
+  revision = "f7c66f685bcab06bcce78ac212c5f3553c063d19"
+  version = "v3.3.0"
 
 [[projects]]
   branch = "master"
-  name = "github.com/gorilla/schema"
+  name = "github.com/jaytaylor/html2text"
   packages = ["."]
-  revision = "8b1100835db5bbdae88541510f70d114b91a7e4d"
-
-[[projects]]
-  name = "github.com/jinzhu/gorm"
-  packages = [".","dialects/postgres"]
-  revision = "5174cc5c242a728b435ea2be8a2f7f998e15429b"
-  version = "v1.0"
+  revision = "0ee88d3006305456b84cad14a24b2576f9411965"
 
 [[projects]]
   branch = "master"
-  name = "github.com/jinzhu/inflection"
+  name = "github.com/levigross/exp-html"
   packages = ["."]
-  revision = "1c35d901db3da928c72a72d8458480cc9ade058f"
+  revision = "8df60c69a8f5b0fe4a72ff6ae3811d4b57154e39"
+
+[[projects]]
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
+  version = "v0.0.2"
+
+[[projects]]
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "5160b48509cf5c877bc22c11c373f8c7738cdb38"
+  version = "v1.3.0"
+
+[[projects]]
+  name = "github.com/mmcdole/gofeed"
+  packages = [".","atom","extensions","internal/shared","rss"]
+  revision = "303223474e837398b2f8a265e5572958bb5568c0"
+  version = "v1.0.0-beta"
 
 [[projects]]
   branch = "master"
-  name = "github.com/lib/pq"
-  packages = [".","hstore","oid"]
-  revision = "dd1fe2071026ce53f36a39112e645b4d4f5793a4"
+  name = "github.com/mmcdole/goxpp"
+  packages = ["."]
+  revision = "77e4a51a73ed99ee3f33c1474dc166866304acbd"
 
 [[projects]]
   branch = "master"
-  name = "github.com/mauidude/go-readability"
+  name = "github.com/olekukonko/tablewriter"
   packages = ["."]
-  revision = "2f30b1a346f19ddab94ffe0cb788331be9399de2"
+  revision = "a7a4c189eb47ed33ce7b35f2880070a0c82a67d4"
 
 [[projects]]
-  name = "github.com/urfave/negroni"
+  branch = "master"
+  name = "github.com/ssor/bom"
   packages = ["."]
-  revision = "fde5e16d32adc7ad637e9cd9ad21d4ebc6192535"
-  version = "v0.2.0"
+  revision = "6386211fdfcf24c0bfbdaceafd02849ed9a8a509"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["html","html/atom"]
-  revision = "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e"
+  packages = ["context","html","html/atom","html/charset"]
+  revision = "cd69bc3fc700721b709c3a59e16e24c67b58f6ff"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = ["encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/gen","internal/tag","internal/utf8internal","language","runes","transform","unicode/cldr"]
+  revision = "c01e4764d870b77f8abe5096ee19ad20d80e8075"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ca952eb25cb1d2784a8a0e25cca43dfc23d1cb07869901a19c593f8e941b90e4"
+  inputs-digest = "3fdb207207df17a611bed928da873767fb5440b57cea6ef5d5fec837b4bd3c4d"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -4,20 +4,15 @@ VERSION := $(shell git describe --tags --always --dirty)
 PKG_LIST := $(shell go list ${PKG}/... | grep -v ${PKG}/vendor/)
 GO_FILES := $(shell find * -type d -name vendor -prune -or -name '*.go' -type f | grep -v vendor)
 
-LDFLAGS = "-d -s -w -X ${PKG}/cmd.Version=${VERSION}"
-BUILD_ARGS = -a -tags netgo -installsuffix netgo -ldflags $(LDFLAGS)
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
 
-PREFIX = /usr/local
+.DEFAULT_GOAL: build
 
-.DEFAULT_GOAL: build/$(BIN)
-
-build/$(BIN): $(GO_FILES)
-	CGO_ENABLED=0 go build ${BUILD_ARGS} -o build/${BIN} ${PKG}
-
-.PHONY: deps
-deps:
-	go get -u github.com/golang/dep/cmd/dep
-	dep ensure
+build/$(BIN)-$(GOOS)-$(GOARCH): $(GO_FILES)
+	mkdir -p build
+	go generate pkg/server/app.go
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -x -v -a -o $@ ${PKG}
 
 .PHONY: lint
 lint:
@@ -39,8 +34,12 @@ version:
 clean:
 	rm -rf build
 
-public/favicon.ico:
-	convert public/apple-touch-icon.png -define icon:auto-resize=64,48,32,16 public/favicon.ico
+.PHONY: build
+build: build/$(BIN)-$(GOOS)-$(GOARCH)
 
-test-server:
-	go run cmd/bookmarks/main.go -database 'postgres://postgres:secret@localhost/bookmarks?sslmode=disable' -secret fafa
+.PHONY: container
+container:
+	docker build --pull -t "nrocco/bookmarks" .
+
+bindata/favicon.ico:
+	convert bindata/apple-touch-icon.png -define icon:auto-resize=64,48,32,16 bindata/favicon.ico
