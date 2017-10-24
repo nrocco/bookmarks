@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:generate go-bindata -pkg server -o bindata.go bindata templates/...
+//go:generate go-bindata -pkg server -o bindata.go assets
 
 var (
 	database *qb.DB
@@ -39,27 +40,30 @@ func Start(file string, address string) error {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Get("/", listBookmarks)
-	r.Get("/archive", listBookmarks)
-	r.Get("/save", saveBookmark)
-	r.Get("/feeds", listFeeds)
-	r.Get("/{id}/archive", archiveBookmark)
-	r.Get("/{id}/readitlater", readitlaterBookmark)
-	r.Get("/{id}/delete", deleteBookmark)
+	r.Mount("/bookmarks", bookmarksRouter())
+	r.Mount("/feeds", feedsRouter())
 
-	r.Get("/apple-touch-icon.png", staticAsset)
-	r.Get("/favicon.ico", staticAsset)
-	r.Get("/osd.xml", staticAsset)
+	r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a := "/index.html"
+
+		if r.URL.Path != "/" {
+			a = r.URL.Path
+		}
+
+		asset, _ := Asset("assets" + a)
+		w.Write(asset)
+	}))
+
+	// fs := http.FileServer(http.Dir("assets"))
+	// r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 	fs.ServeHTTP(w, r)
+	// }))
 
 	return http.ListenAndServe(address, r)
 }
 
-func staticAsset(w http.ResponseWriter, r *http.Request) {
-	contents, err := Asset("bindata" + r.URL.Path)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	w.Write(contents)
+func jsonResponse(w http.ResponseWriter, code int, object interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(object)
 }

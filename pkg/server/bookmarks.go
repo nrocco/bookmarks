@@ -14,7 +14,7 @@ import (
 
 func init() {
 	justext.RegisterStoplist("English", func() ([]byte, error) {
-		return Asset("bindata/English.txt")
+		return Asset("assets/English.txt")
 	})
 }
 
@@ -28,20 +28,33 @@ type Bookmark struct {
 	Archived bool
 }
 
+func bookmarksRouter() chi.Router {
+	r := chi.NewRouter()
+
+	r.Get("/", listBookmarks)
+	r.Get("/save", saveBookmark)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Delete("/", deleteBookmark)
+		r.Post("/archive", archiveBookmark)
+		r.Post("/readitlater", readitlaterBookmark)
+	})
+
+	return r
+}
+
 func saveBookmark(w http.ResponseWriter, r *http.Request) {
-	URL := r.URL.Query().Get("url")
-
-	if URL == "" {
-		http.Error(w, "You must provide a url", 400)
-		return
-	}
-
 	bookmark := &Bookmark{
 		Title:   r.URL.Query().Get("title"),
-		URL:     URL,
+		URL:     r.URL.Query().Get("url"),
 		Created: time.Now(),
 		Updated: time.Now(),
 		Content: "Fetching...",
+	}
+
+	if bookmark.URL == "" {
+		http.Error(w, "You must provide a url", 400)
+		return
 	}
 
 	query := database.Insert("bookmarks")
@@ -54,41 +67,34 @@ func saveBookmark(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Bookmark for %s already exists\n", URL)
+		log.Printf("Bookmark for %s already exists\n", bookmark.URL)
 	}
 
 	go fetchContent(bookmark.URL)
 
-	http.Redirect(w, r, URL, 302)
+	http.Redirect(w, r, bookmark.URL, 302)
 }
 
 func listBookmarks(w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Page
-		Search    string
-		Bookmarks []*Bookmark
-	}{
-		Page:   Page{r},
-		Search: r.URL.Query().Get("q"),
-	}
-
 	query := database.Select("bookmarks")
-	query.Where("archived = ?", r.URL.Path == "/archive")
 	query.OrderBy("created", "DESC")
 	query.Limit(50)
 
-	if data.Search != "" {
-		filter := "%" + data.Search + "%"
-		query.Where("(title LIKE ? OR content LIKE ?)", filter, filter)
+	query.Where("archived = ?", r.URL.Query().Get("archived") == "true")
+
+	if search := r.URL.Query().Get("q"); search != "" {
+		query.Where("(title LIKE ? OR content LIKE ?)", "%"+search+"%", "%"+search+"%")
 	}
 
-	_, err := query.Load(&data.Bookmarks)
+	bookmarks := []*Bookmark{}
+
+	_, err := query.Load(&bookmarks)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
 
-	templates["bookmarks.tmpl"].Execute(w, data)
+	jsonResponse(w, 200, &bookmarks)
 }
 
 func archiveBookmark(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +108,7 @@ func archiveBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), 302)
+	jsonResponse(w, 204, nil)
 }
 
 func readitlaterBookmark(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +122,7 @@ func readitlaterBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), 302)
+	jsonResponse(w, 204, nil)
 }
 
 func deleteBookmark(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +134,7 @@ func deleteBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, r.Referer(), 302)
+	jsonResponse(w, 204, nil)
 }
 
 func fetchContent(URL string) {

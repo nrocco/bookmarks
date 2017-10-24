@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bookmarks</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+    <style>
+      .bookmark {
+        margin-top: 24px;
+      }
+      .actions {
+        margin-top: 16px;
+      }
+      .b-content {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+      }
+    </style>
+    <script src="https://unpkg.com/vue/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/vue-router/dist/vue-router.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <section class="hero is-bold" :class="color">
+        <div class="hero-body">
+          <div class="container">
+            <h1 class="title">{{ title }}</h1>
+            <h2 class="subtitle">{{ subtitle }}</h2>
+          </div>
+        </div>
+        <div class="hero-foot">
+          <nav class="tabs is-boxed is-right">
+            <div class="container">
+              <ul>
+                <li><router-link exact active-class="is-active" tag="li" to="/"><a>Read It Later</a></router-link></li>
+                <li><router-link exact active-class="is-active" tag="li" to="/archive"><a>Archive</a></router-link></li>
+                <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <router-view></router-view>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="container">
+          <div class="content">
+            <textarea class="textarea">javascript:(function(){window.location = '{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</textarea>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="text/x-template" id="feeds-list">
+      <div>
+        <div class="bookmark" v-for="feed in feeds" :key="feed.ID">
+          <strong>{{ feed.Title }}</strong>
+          <br />
+          <small><a :href="feed.URL">{{ feed.URL }}</a></small>
+        </div>
+      </div>
+    </script>
+
+    <script type="text/x-template" id="bookmarks-list">
+      <div>
+        <div class="control">
+          <form action="" method="get">
+            <input class="input" type="search" placeholder="Search" name="q" value="" autofocus>
+          </form>
+        </div>
+        <div class="bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
+          <strong>{{ bookmark.Title }}</strong>
+          <br />
+          <small><a :href="bookmark.URL">{{ bookmark.URL }}</a></small>
+          <br />
+          <p class="b-content">{{ bookmark.Content }}</p>
+          <p class="actions has-text-right">
+            <a @click.prevent="onRemoveClicked(bookmark)" class="button is-small is-danger is-outlined">Remove</a>
+            <a v-if="bookmark.Archived" href @click.prevent="onReadItLaterClicked(bookmark)" class="button is-small is-primary">Read it later</a>
+            <a v-else="bookmark.Archived" href @click.prevent="onArchiveClicked(bookmark)" class="button is-small is-dark">Archive</a>
+          </p>
+        </div>
+      </div>
+    </script>
+
+    <script>
+      var BookmarksList = Vue.extend({
+        template: '#bookmarks-list',
+        data: function () {
+          return {
+            bookmarks: [],
+          };
+        },
+        methods: {
+          fetchBookmarks: function (url) {
+            var self = this;
+            axios.get(url).then(function (response) {
+              self.bookmarks = response.data;
+            });
+          },
+          onReadItLaterClicked: function (bookmark) {
+            var self = this;
+            axios.post("/bookmarks/"+bookmark.ID+"/readitlater").then(function (response) {
+              self.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1);
+            });
+          },
+          onArchiveClicked: function (bookmark) {
+            var self = this;
+            axios.post("/bookmarks/"+bookmark.ID+"/archive").then(function (response) {
+              self.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1);
+            });
+          },
+          onRemoveClicked: function (bookmark) {
+            var self = this;
+            axios.delete("/bookmarks/"+bookmark.ID).then(function (response) {
+              self.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1);
+            });
+          },
+        },
+        created: function () {
+          this.fetchBookmarks(this.$route.meta.url);
+        },
+        beforeRouteLeave: function (to, from, next) {
+          this.fetchBookmarks(to.meta.url);
+          next();
+        },
+      });
+
+      var Feeds = {
+        template: '#feeds-list',
+        data: function () {
+          return {
+            feeds: [],
+          };
+        },
+        created: function () {
+          var self = this;
+          axios.get("/feeds").then(function (response) {
+            self.feeds = response.data;
+          });
+        },
+      };
+
+      new Vue({
+        el: "#app",
+        router: new VueRouter({
+          routes: [
+            {
+              path: "/",
+              component: BookmarksList,
+              meta: {
+                title: "Read it later",
+                subtitle: "All articles you recently saved",
+                url: "/bookmarks",
+                color: "is-primary"
+              }
+            },
+            {
+              path: "/archive",
+              component: BookmarksList,
+              meta: {
+                title: "Archive",
+                subtitle: "All articles you archived",
+                url: "/bookmarks?archived=true",
+                color: "is-dark"
+              }
+            },
+            {
+              path: "/feeds",
+              component: Feeds,
+              meta: {
+                title: "Feeds",
+                subtitle: "All your rss and atom feeds",
+                url: "/feeds",
+                color: "is-warning"
+              }
+            },
+          ],
+        }),
+        data: function () {
+          return {};
+        },
+        computed: {
+          baseurl: function () {
+            return location.protocol+"//"+location.host;
+          },
+          title: function () {
+            return this.$route.meta.title;
+          },
+          subtitle: function () {
+            return this.$route.meta.subtitle;
+          },
+          color: function () {
+            return this.$route.meta.color;
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
