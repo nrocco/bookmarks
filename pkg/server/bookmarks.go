@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -53,7 +54,7 @@ func saveBookmark(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bookmark.URL == "" {
-		http.Error(w, "You must provide a url", 400)
+		jsonError(w, errors.New("You must provide a url"), 400)
 		return
 	}
 
@@ -90,7 +91,7 @@ func listBookmarks(w http.ResponseWriter, r *http.Request) {
 
 	_, err := query.Load(&bookmarks)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		jsonError(w, err, 400)
 		return
 	}
 
@@ -104,7 +105,7 @@ func archiveBookmark(w http.ResponseWriter, r *http.Request) {
 	query.Where("id = ?", chi.URLParam(r, "id"))
 
 	if _, err := query.Exec(); err != nil {
-		http.Error(w, err.Error(), 400)
+		jsonError(w, err, 400)
 		return
 	}
 
@@ -118,7 +119,7 @@ func readitlaterBookmark(w http.ResponseWriter, r *http.Request) {
 	query.Where("id = ?", chi.URLParam(r, "id"))
 
 	if _, err := query.Exec(); err != nil {
-		http.Error(w, err.Error(), 400)
+		jsonError(w, err, 400)
 		return
 	}
 
@@ -130,7 +131,7 @@ func deleteBookmark(w http.ResponseWriter, r *http.Request) {
 	query.Where("id = ?", chi.URLParam(r, "id"))
 
 	if _, err := query.Exec(); err != nil {
-		http.Error(w, err.Error(), 400)
+		jsonError(w, err, 400)
 		return
 	}
 

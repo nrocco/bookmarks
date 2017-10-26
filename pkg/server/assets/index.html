@@ -6,20 +6,6 @@
     <title>Bookmarks</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
-    <style>
-      .bookmark {
-        margin-top: 24px;
-      }
-      .actions {
-        margin-top: 16px;
-      }
-      .b-content {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 4;
-        -webkit-box-orient: vertical;
-      }
-    </style>
     <script src="https://unpkg.com/vue/dist/vue.min.js"></script>
     <script src="https://unpkg.com/vue-router/dist/vue-router.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -54,40 +40,57 @@
 
       <footer class="footer">
         <div class="container">
-          <div class="content">
-            <textarea class="textarea">javascript:(function(){window.location = '{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</textarea>
+          <div class="content has-text-centered is-size-7">
+            <p>Made with love by CasaDiRocco</p>
+            <p><a @click.prevent="open=true">bookmarklet</a></p>
           </div>
         </div>
       </footer>
+
+      <div class="modal" :class="{'is-active':open}">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+          <textarea class="textarea">javascript:(function(){window.location = '{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</textarea>
+        </div>
+        <button class="modal-close is-large" aria-label="close" @click.prevent="open=false"></button>
+      </div>
     </div>
 
     <script type="text/x-template" id="feeds-list">
       <div>
-        <div class="bookmark" v-for="feed in feeds" :key="feed.ID">
-          <strong>{{ feed.Title }}</strong>
-          <br />
-          <small><a :href="feed.URL">{{ feed.URL }}</a></small>
+        <div class="block control is-expanded">
+          <div class="select is-fullwidth">
+            <select v-model="selected" @change="onChange">
+              <option value="">All feeds</option>
+              <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }}</option>
+            </select>
+          </div>
         </div>
-      </div>
+        <div class="block" v-for="item in items" :key="item.ID">
+          <p class="has-text-weight-bold">{{ item.Title }}</p>
+          <p class="is-size-7"><a :href="item.URL">{{ item.URL }}</a></p>
+          <p class="content">{{ item.Content|excerpt }}</p>
+          <p class="block has-text-right">
+            <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
+            <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
+          </p>
+        </div>
+      <div>
     </script>
 
     <script type="text/x-template" id="bookmarks-list">
       <div>
-        <div class="control">
-          <form action="" method="get">
-            <input class="input" type="search" placeholder="Search" name="q" value="" autofocus>
-          </form>
+        <div class="block control">
+          <input class="input" type="search" placeholder="Search" v-model="q" autofocus @search="onSearch">
         </div>
-        <div class="bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
-          <strong>{{ bookmark.Title }}</strong>
-          <br />
-          <small><a :href="bookmark.URL">{{ bookmark.URL }}</a></small>
-          <br />
-          <p class="b-content">{{ bookmark.Content }}</p>
-          <p class="actions has-text-right">
+        <div class="block" v-for="bookmark in bookmarks" :key="bookmark.ID">
+          <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
+          <p class="is-size-7"><a :href="bookmark.URL">{{ bookmark.URL }}</a></p>
+          <p class="content">{{ bookmark.Content|excerpt }}</p>
+          <p class="block has-text-right">
             <a @click.prevent="onRemoveClicked(bookmark)" class="button is-small is-danger is-outlined">Remove</a>
-            <a v-if="bookmark.Archived" href @click.prevent="onReadItLaterClicked(bookmark)" class="button is-small is-primary">Read it later</a>
-            <a v-else="bookmark.Archived" href @click.prevent="onArchiveClicked(bookmark)" class="button is-small is-dark">Archive</a>
+            <a @click.prevent="onReadItLaterClicked(bookmark)" class="button is-small is-primary" v-if="bookmark.Archived">Read it later</a>
+            <a @click.prevent="onArchiveClicked(bookmark)" class="button is-small is-dark" v-else="bookmark.Archived">Archive</a>
           </p>
         </div>
       </div>
@@ -99,14 +102,20 @@
         data: function () {
           return {
             bookmarks: [],
+            q: "",
           };
         },
+        filters: {
+          excerpt: function (value) {
+            if (!value) {
+              return "No content";
+            }
+            return value.toString().substring(0, 500) + "...";
+          },
+        },
         methods: {
-          fetchBookmarks: function (url) {
-            var self = this;
-            axios.get(url).then(function (response) {
-              self.bookmarks = response.data;
-            });
+          onSearch: function(event) {
+            this.$router.push({query: {q: this.q}})
           },
           onReadItLaterClicked: function (bookmark) {
             var self = this;
@@ -126,27 +135,83 @@
               self.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1);
             });
           },
+          fetchBookmarks: function () {
+            var payload = {}, self = this;
+            if (this.$route.meta.archived) {
+              payload.archived = "true";
+            }
+            if (this.q != "") {
+              payload.q = this.q;
+            }
+            axios.get("/bookmarks", {params:payload}).then(function (response) {
+              self.bookmarks = response.data;
+            });
+          }
         },
-        created: function () {
-          this.fetchBookmarks(this.$route.meta.url);
-        },
-        beforeRouteLeave: function (to, from, next) {
-          this.fetchBookmarks(to.meta.url);
+        beforeRouteUpdate (to, from, next) {
           next();
+          this.fetchBookmarks();
+        },
+        beforeRouteEnter: function (to, from, next) {
+          next(function(vm) {
+            vm.fetchBookmarks();
+          });
         },
       });
 
       var Feeds = {
-        template: '#feeds-list',
+        template: "#feeds-list",
         data: function () {
           return {
             feeds: [],
+            items: [],
+            selected: "",
           };
         },
-        created: function () {
-          var self = this;
-          axios.get("/feeds").then(function (response) {
-            self.feeds = response.data;
+        filters: {
+          excerpt: function (value) {
+            if (!value) {
+              return "No content";
+            }
+            return value.toString().substring(0, 500) + "...";
+          },
+        },
+        methods: {
+          onChange: function(event) {
+            this.$router.push({query: {feed: this.selected}});
+          },
+          onReadItLaterClicked: function (item) {
+            var self = this;
+            axios.post("/items/"+item.ID+"/readitlater").then(function (response) {
+              self.items.splice(self.items.indexOf(item), 1);
+            });
+          },
+          onRemoveClicked: function (item) {
+            var self = this;
+            axios.delete("/items/"+item.ID).then(function (response) {
+              self.items.splice(self.items.indexOf(item), 1);
+            });
+          },
+          fetchFeeds: function () {
+            var payload = {}, self = this;
+            if (this.selected != "") {
+              payload.feed = this.selected;
+            }
+            axios.get("/items", {params:payload}).then(function (response) {
+              self.items = response.data;
+            });
+            axios.get("/feeds").then(function (response) {
+              self.feeds = response.data;
+            });
+          }
+        },
+        beforeRouteUpdate (to, from, next) {
+          next();
+          this.fetchFeeds();
+        },
+        beforeRouteEnter: function (to, from, next) {
+          next(function(vm) {
+            vm.fetchFeeds();
           });
         },
       };
@@ -161,7 +226,7 @@
               meta: {
                 title: "Read it later",
                 subtitle: "All articles you recently saved",
-                url: "/bookmarks",
+                archived: false,
                 color: "is-primary"
               }
             },
@@ -171,7 +236,7 @@
               meta: {
                 title: "Archive",
                 subtitle: "All articles you archived",
-                url: "/bookmarks?archived=true",
+                archived: true,
                 color: "is-dark"
               }
             },
@@ -181,14 +246,15 @@
               meta: {
                 title: "Feeds",
                 subtitle: "All your rss and atom feeds",
-                url: "/feeds",
                 color: "is-warning"
               }
             },
           ],
         }),
         data: function () {
-          return {};
+          return {
+            open: false,
+          };
         },
         computed: {
           baseurl: function () {

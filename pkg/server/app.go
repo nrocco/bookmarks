@@ -19,6 +19,7 @@ var (
 	database *qb.DB
 )
 
+// Start initializes the database and runs the http service
 func Start(file string, address string) error {
 	var err error
 
@@ -42,6 +43,7 @@ func Start(file string, address string) error {
 
 	r.Mount("/bookmarks", bookmarksRouter())
 	r.Mount("/feeds", feedsRouter())
+	r.Mount("/items", itemsRouter())
 
 	r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a := "/index.html"
@@ -60,6 +62,10 @@ func Start(file string, address string) error {
 	// }))
 
 	return http.ListenAndServe(address, r)
+}
+
+func jsonError(w http.ResponseWriter, err error, code int) {
+	jsonResponse(w, code, map[string]string{"message": err.Error()})
 }
 
 func jsonResponse(w http.ResponseWriter, code int, object interface{}) {
