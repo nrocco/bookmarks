@@ -3,3 +3,4 @@ Makefile
 build
 run
 vendor
+pkg/server/bindata.go

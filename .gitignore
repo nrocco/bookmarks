@@ -1,3 +1,4 @@
 /vendor
 /build
 /run
+/pkg/server/bindata.go

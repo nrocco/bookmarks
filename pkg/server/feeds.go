@@ -34,10 +34,11 @@ func NewFeedFromUrl(URL string) (*Feed, error) {
 	}
 
 	return &Feed{
-		Title:   feed.Title,
-		URL:     URL,
-		Created: time.Now(),
-		Updated: time.Now(),
+		Title:     feed.Title,
+		URL:       URL,
+		Created:   time.Now(),
+		Updated:   time.Now(),
+		Refreshed: time.Now().Add(-336 * time.Hour), // two weeks ago
 	}, nil
 }
 
@@ -78,7 +79,7 @@ func saveFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := database.Insert("feeds")
-	query.Columns("title", "created", "updated", "url")
+	query.Columns("title", "created", "updated", "refreshed", "url")
 	query.Record(feed)
 
 	if _, err := query.Exec(); err != nil {
