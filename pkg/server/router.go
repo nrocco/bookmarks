@@ -7,31 +7,9 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/nrocco/bookmarks/qb"
-
-	// We assume sqlite
-	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:generate go-bindata -pkg server -o bindata.go assets
-
-var (
-	database *qb.DB
-)
-
-// Start initializes the database and runs the http service
-func Start(file string, address string) error {
-	var err error
-
-	database, err = qb.Open(file)
-	if err != nil {
-		return err
-	}
-
-	if _, err = database.Exec(schema); err != nil {
-		return err
-	}
-
+func initRouter() chi.Router {
 	r := chi.NewRouter()
 
 	// A good base middleware stack
@@ -47,21 +25,20 @@ func Start(file string, address string) error {
 
 	r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		a := "/index.html"
-
 		if r.URL.Path != "/" {
 			a = r.URL.Path
 		}
-
 		asset, _ := Asset("assets" + a)
+		// TODO: check for error here
 		w.Write(asset)
 	}))
 
-	// fs := http.FileServer(http.Dir("assets"))
+	// fs := http.FileServer(http.Dir("pkg/server/assets"))
 	// r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	// 	fs.ServeHTTP(w, r)
 	// }))
 
-	return http.ListenAndServe(address, r)
+	return r
 }
 
 func jsonError(w http.ResponseWriter, err error, code int) {

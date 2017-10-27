@@ -2,12 +2,10 @@ package server
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
-	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 type Item struct {
@@ -36,7 +34,7 @@ func itemsRouter() chi.Router {
 func listItems(w http.ResponseWriter, r *http.Request) {
 	query := database.Select("items")
 	query.OrderBy("date", "DESC")
-	query.Limit(100)
+	query.Limit(100) // TODO support limit and offset
 
 	if feed := r.URL.Query().Get("feed"); feed != "" {
 		query.Where("feed_id = ?", feed)
@@ -44,9 +42,8 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 
 	items := []*Item{}
 
-	_, err := query.Load(&items)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
+	if _, err := query.Load(&items); err != nil {
+		http.Error(w, err.Error(), 400) // TODO remove hard coded status code
 		return
 	}
 
@@ -59,8 +56,7 @@ func readitlaterItem(w http.ResponseWriter, r *http.Request) {
 
 	var item Item
 
-	_, err := queryGet.Load(&item)
-	if err != nil {
+	if _, err := queryGet.Load(&item); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
@@ -70,28 +66,14 @@ func readitlaterItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookmark := &Bookmark{
-		Title:   item.Title,
-		URL:     item.URL,
-		Created: time.Now(),
-		Updated: time.Now(),
-		Content: "Fetching...",
+	bookmark := Bookmark{
+		URL: item.URL,
 	}
 
-	queryInsert := database.Insert("bookmarks")
-	queryInsert.Columns("title", "created", "updated", "url", "content")
-	queryInsert.Record(bookmark)
-
-	if _, err := queryInsert.Exec(); err != nil {
-		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists == false {
-			log.Println(err)
-			return
-		}
-
-		log.Printf("Bookmark for %s already exists\n", bookmark.URL)
+	if err := AddBookmark(&bookmark); err != nil {
+		jsonError(w, err, 500)
+		return
 	}
-
-	go fetchContent(bookmark.URL)
 
 	queryDelete := database.Delete("items")
 	queryDelete.Where("id = ?", chi.URLParam(r, "id"))

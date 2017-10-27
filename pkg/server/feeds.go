@@ -1,13 +1,11 @@
 package server
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/mmcdole/gofeed"
 )
 
@@ -18,129 +16,25 @@ type Feed struct {
 	Refreshed time.Time
 	Title     string
 	URL       string
-	ItemCount int64
 }
 
-func NewFeedFromUrl(URL string) (*Feed, error) {
-	if URL == "" {
-		return &Feed{}, errors.New("You must provide a URL")
-	}
-
+// Refresh fetches the rss feed items and persists those to the database
+func (feed *Feed) Refresh() error {
 	fp := gofeed.NewParser()
 
-	feed, err := fp.ParseURL(URL)
+	parsedFeed, err := fp.ParseURL(feed.URL)
 	if err != nil {
-		return &Feed{}, err
+		return err
 	}
 
-	return &Feed{
-		Title:     feed.Title,
-		URL:       URL,
-		Created:   time.Now(),
-		Updated:   time.Now(),
-		Refreshed: time.Now().Add(-336 * time.Hour), // two weeks ago
-	}, nil
-}
-
-func feedsRouter() chi.Router {
-	r := chi.NewRouter()
-
-	r.Get("/", listFeeds)
-	r.Post("/", saveFeed)
-
-	r.Route("/{id}", func(r chi.Router) {
-		r.Post("/refresh", refreshFeed)
-	})
-
-	return r
-}
-
-func listFeeds(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("feeds")
-	query.OrderBy("refreshed", "DESC")
-	query.Limit(50)
-
-	feeds := []*Feed{}
-
-	_, err := query.Load(&feeds)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	jsonResponse(w, 200, &feeds)
-}
-
-func saveFeed(w http.ResponseWriter, r *http.Request) {
-	feed, err := NewFeedFromUrl(r.URL.Query().Get("url"))
-	if err != nil {
-		jsonError(w, err, 400)
-		return
-	}
-
-	query := database.Insert("feeds")
-	query.Columns("title", "created", "updated", "refreshed", "url")
-	query.Record(feed)
-
-	if _, err := query.Exec(); err != nil {
-		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
-			jsonError(w, err, 400)
-		} else {
-			jsonError(w, err, 500)
-		}
-		return
-	}
-
-	go refresh(feed.ID)
-
-	jsonResponse(w, 200, &feed)
-}
-
-func refreshFeed(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("feeds")
-	query.Where("id = ?", chi.URLParam(r, "id"))
-
-	var feed Feed
-
-	_, err := query.Load(&feed)
-	if err != nil {
-		jsonError(w, err, 404)
-		return
-	}
-
-	go refresh(feed.ID)
-
-	jsonResponse(w, 204, nil)
-}
-
-func refresh(ID int64) {
-	query := database.Select("feeds")
-	query.Where("id = ?", ID)
-
-	var feed Feed
-
-	_, err := query.Load(&feed)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	fp := gofeed.NewParser()
-
-	fuu, err := fp.ParseURL(feed.URL)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	for _, item := range fuu.Items {
+	for _, item := range parsedFeed.Items {
 		date := item.PublishedParsed
 		if date == nil {
 			date = item.UpdatedParsed
 		}
 
 		if date.Before(feed.Refreshed) {
-			log.Println("Ignoring item as its date is older than the last refresh date")
+			log.Printf("Ignoring '%s' as its date is older than the last refresh date %s", item.Title, feed.Refreshed)
 			continue
 		}
 
@@ -158,13 +52,75 @@ func refresh(ID int64) {
 		}
 	}
 
-	updateQuery := database.Update("feeds")
-	updateQuery.Set("refreshed", time.Now())
-	updateQuery.Set("updated", time.Now())
-	updateQuery.Where("id = ?", ID)
+	feed.Refreshed = time.Now()
+	feed.Updated = time.Now()
 
-	if _, err := updateQuery.Exec(); err != nil {
-		log.Println(err)
+	query := database.Update("feeds")
+	query.Set("refreshed", feed.Refreshed)
+	query.Set("updated", feed.Updated)
+	query.Where("id = ?", feed.ID)
+
+	if _, err := query.Exec(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func feedsRouter() chi.Router {
+	r := chi.NewRouter()
+
+	r.Get("/", listFeeds)
+	r.Post("/", saveFeeds)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Post("/refresh", refreshFeed)
+	})
+
+	return r
+}
+
+func listFeeds(w http.ResponseWriter, r *http.Request) {
+	query := database.Select("feeds")
+	query.OrderBy("refreshed", "DESC")
+	query.Limit(50) // TODO support limit and offset
+
+	feeds := []*Feed{}
+
+	if _, err := query.Load(&feeds); err != nil {
+		http.Error(w, err.Error(), 400) // TODO remove hard coded status code
 		return
 	}
+
+	jsonResponse(w, 200, &feeds)
+}
+
+func saveFeeds(w http.ResponseWriter, r *http.Request) {
+	feed := Feed{
+		URL: r.URL.Query().Get("url"), // TODO decode json body
+	}
+
+	if err := AddFeed(&feed); err != nil {
+		jsonError(w, err, 400) // TODO remove hard coded status code
+		return
+	}
+
+	jsonResponse(w, 200, &feed)
+}
+
+func refreshFeed(w http.ResponseWriter, r *http.Request) {
+	query := database.Select("feeds")
+	query.Where("id = ?", chi.URLParam(r, "id"))
+
+	var feed Feed
+
+	_, err := query.Load(&feed)
+	if err != nil {
+		jsonError(w, err, 404) // TODO remove hard coded status code
+		return
+	}
+
+	WorkQueue <- WorkRequest{Type: "Feed.Refresh", Feed: feed}
+
+	jsonResponse(w, 204, nil)
 }

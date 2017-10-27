@@ -4,7 +4,7 @@ COPY . ./
 RUN apk add --no-cache gcc musl-dev ca-certificates sqlite git
 RUN go get -u github.com/golang/dep/cmd/dep && dep ensure && dep status
 RUN go get -u github.com/jteeuwen/go-bindata/...
-RUN go generate pkg/server/app.go
+RUN go generate pkg/server/*.go
 RUN CGO_ENABLED=1 go build -x -v -a -o bookmarks github.com/nrocco/bookmarks/cmd/bookmarks
 
 FROM alpine:edge
