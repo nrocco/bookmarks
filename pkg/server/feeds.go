@@ -1,126 +1,102 @@
 package server
 
 import (
-	"log"
+	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/go-chi/chi"
-	"github.com/mmcdole/gofeed"
+	"github.com/nrocco/bookmarks/pkg/storage"
 )
 
-type Feed struct {
-	ID        int64
-	Created   time.Time
-	Updated   time.Time
-	Refreshed time.Time
-	Title     string
-	URL       string
-}
+var (
+	contextKeyFeed = contextKey("feed")
+)
 
-// Refresh fetches the rss feed items and persists those to the database
-func (feed *Feed) Refresh() error {
-	fp := gofeed.NewParser()
-
-	parsedFeed, err := fp.ParseURL(feed.URL)
-	if err != nil {
-		return err
-	}
-
-	for _, item := range parsedFeed.Items {
-		date := item.PublishedParsed
-		if date == nil {
-			date = item.UpdatedParsed
-		}
-
-		if date.Before(feed.Refreshed) {
-			log.Printf("Ignoring '%s' as its date is older than the last refresh date %s", item.Title, feed.Refreshed)
-			continue
-		}
-
-		content := item.Content
-		if content == "" {
-			content = item.Description
-		}
-
-		query := database.Insert("items")
-		query.Columns("feed_id", "created", "updated", "title", "url", "date", "content")
-		query.Values(feed.ID, time.Now(), time.Now(), item.Title, item.Link, date, content)
-
-		if _, err := query.Exec(); err != nil {
-			log.Println(err)
-		}
-	}
-
-	feed.Refreshed = time.Now()
-	feed.Updated = time.Now()
-
-	query := database.Update("feeds")
-	query.Set("refreshed", feed.Refreshed)
-	query.Set("updated", feed.Updated)
-	query.Where("id = ?", feed.ID)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func feedsRouter() chi.Router {
+func feedsRouter(server *Server) chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", listFeeds)
-	r.Post("/", saveFeeds)
-
+	r.Get("/", server.listFeeds)
+	r.Post("/", server.postFeeds)
 	r.Route("/{id}", func(r chi.Router) {
-		r.Post("/refresh", refreshFeed)
+		r.Use(server.feedContext)
+		r.Delete("/", server.deleteFeed)
+		r.Post("/refresh", server.refreshFeed)
 	})
 
 	return r
 }
 
-func listFeeds(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("feeds")
-	query.OrderBy("refreshed", "DESC")
-	query.Limit(50) // TODO support limit and offset
+func (server *Server) listFeeds(w http.ResponseWriter, r *http.Request) {
+	feeds, totalCount := server.store.ListFeeds(&storage.ListFeedsOptions{
+		Search: r.URL.Query().Get("q"),
+		Limit:  50, // TODO allow client to set this
+		Offset: 0,  // TODO allow client to set this
+	})
 
-	feeds := []*Feed{}
+	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
 
-	if _, err := query.Load(&feeds); err != nil {
-		http.Error(w, err.Error(), 400) // TODO remove hard coded status code
-		return
-	}
-
-	jsonResponse(w, 200, &feeds)
+	jsonResponse(w, 200, feeds)
 }
 
-func saveFeeds(w http.ResponseWriter, r *http.Request) {
-	feed := Feed{
-		URL: r.URL.Query().Get("url"), // TODO decode json body
-	}
+func (server *Server) postFeeds(w http.ResponseWriter, r *http.Request) {
+	var feed storage.Feed
 
-	if err := AddFeed(&feed); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	if err := decoder.Decode(&feed); err != nil {
+		jsonError(w, err, 400)
 		return
 	}
+
+	if err := server.store.AddFeed(&feed); err != nil {
+		jsonError(w, err, 500)
+		return
+	}
+
+	server.queue.Schedule("Feed.Refresh", feed.ID)
 
 	jsonResponse(w, 200, &feed)
 }
 
-func refreshFeed(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("feeds")
-	query.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) feedContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil {
+			jsonError(w, errors.New("Feed Not Found"), 404)
+			return
+		}
 
-	var feed Feed
+		feed := storage.Feed{ID: ID}
 
-	_, err := query.Load(&feed)
-	if err != nil {
-		jsonError(w, err, 404) // TODO remove hard coded status code
+		if err := server.store.GetFeed(&feed); err != nil {
+			jsonError(w, errors.New("Feed Not Found"), 404)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), contextKeyFeed, &feed)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (server *Server) refreshFeed(w http.ResponseWriter, r *http.Request) {
+	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
+
+	server.queue.Schedule("Feed.Refresh", feed.ID)
+
+	jsonResponse(w, 204, nil)
+}
+
+func (server *Server) deleteFeed(w http.ResponseWriter, r *http.Request) {
+	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
+
+	if err := server.store.DeleteFeed(feed); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
-
-	WorkQueue <- WorkRequest{Type: "Feed.Refresh", Feed: feed}
 
 	jsonResponse(w, 204, nil)
 }

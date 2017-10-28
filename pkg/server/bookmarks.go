@@ -1,177 +1,135 @@
 package server
 
 import (
-	"bytes"
-	"log"
+	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
-	"time"
+	"strconv"
 
-	"github.com/JalfResi/justext"
 	"github.com/go-chi/chi"
-	"github.com/jaytaylor/html2text"
+	"github.com/nrocco/bookmarks/pkg/storage"
 )
 
-func init() {
-	justext.RegisterStoplist("English", func() ([]byte, error) {
-		return Asset("assets/English.txt")
-	})
-}
+var (
+	contextKeyBookmark = contextKey("bookmark")
+)
 
-type Bookmark struct {
-	ID       int64
-	Created  time.Time
-	Updated  time.Time
-	Title    string
-	URL      string
-	Content  string
-	Archived bool
-}
-
-// FetchContent downloads the bookmark, reduces the result to a readable plain text format
-func (bookmark *Bookmark) FetchContent() error {
-	log.Printf("Fetching content from %s\n", bookmark.URL)
-
-	response, err := http.Get(bookmark.URL)
-	if err != nil {
-		return err
-	}
-
-	defer response.Body.Close()
-
-	reader := justext.NewReader(response.Body)
-
-	reader.Stoplist, err = justext.GetStoplist("English")
-	if err != nil {
-		return err
-	}
-
-	paragraphSet, err := reader.ReadAll()
-	if err != nil {
-		return err
-	}
-
-	var b bytes.Buffer
-	writer := justext.NewWriter(&b)
-
-	err = writer.WriteAll(paragraphSet)
-	if err != nil {
-		return err
-	}
-
-	bookmark.Content, err = html2text.FromReader(&b)
-	if err != nil {
-		return err
-	}
-
-	query := database.Update("bookmarks")
-	query.Set("content", bookmark.Content)
-	query.Set("updated", time.Now())
-	query.Where("url = ?", bookmark.URL)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
-
-	log.Printf("Successfully fetched %s\n", bookmark.URL)
-
-	return nil
-}
-
-func bookmarksRouter() chi.Router {
+func bookmarksRouter(server *Server) chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", listBookmarks)
-	r.Post("/", postBookmarks)
-	r.Get("/save", saveBookmark)
+	r.Get("/", server.listBookmarks)
+	r.Post("/", server.postBookmarks)
+	r.Get("/save", server.saveBookmark)
 	r.Route("/{id}", func(r chi.Router) {
-		r.Delete("/", deleteBookmark)
-		r.Post("/archive", archiveBookmark)
-		r.Post("/readitlater", readitlaterBookmark)
+		r.Use(server.bookmarkContext)
+		r.Delete("/", server.deleteBookmark)
+		r.Post("/archive", server.archiveBookmark)
+		r.Post("/readitlater", server.readitlaterBookmark)
 	})
 
 	return r
 }
 
-func listBookmarks(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("bookmarks")
-	query.OrderBy("created", "DESC")
-	query.Limit(50) // TODO allow limit and offset to be configured
+func (server *Server) listBookmarks(w http.ResponseWriter, r *http.Request) {
+	bookmarks, totalCount := server.store.ListBookmarks(&storage.ListBookmarksOptions{
+		Search:   r.URL.Query().Get("q"),
+		Archived: (r.URL.Query().Get("archived") == "true"),
+		Limit:    50, // TODO allow client to set this
+		Offset:   0,  // TODO allow client to set this
+	})
 
-	query.Where("archived = ?", r.URL.Query().Get("archived") == "true")
+	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
 
-	if search := r.URL.Query().Get("q"); search != "" {
-		query.Where("(title LIKE ? OR url LIKE ? OR content LIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
-	}
+	jsonResponse(w, 200, bookmarks)
+}
 
-	bookmarks := []*Bookmark{}
+func (server *Server) postBookmarks(w http.ResponseWriter, r *http.Request) {
+	var bookmark storage.Bookmark
 
-	if _, err := query.Load(&bookmarks); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	if err := decoder.Decode(&bookmark); err != nil {
 		jsonError(w, err, 400)
 		return
 	}
 
-	jsonResponse(w, 200, &bookmarks)
-}
-
-func postBookmarks(w http.ResponseWriter, r *http.Request) {
-	bookmark := Bookmark{} // TODO: decode reqeust body into struct
-
-	if err := AddBookmark(&bookmark); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+	if err := server.store.AddBookmark(&bookmark); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
+
+	server.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
 
 	jsonResponse(w, 200, &bookmark)
 }
 
-func saveBookmark(w http.ResponseWriter, r *http.Request) {
-	bookmark := Bookmark{
+func (server *Server) saveBookmark(w http.ResponseWriter, r *http.Request) {
+	bookmark := storage.Bookmark{
 		Title: r.URL.Query().Get("title"),
 		URL:   r.URL.Query().Get("url"),
 	}
 
-	if err := AddBookmark(&bookmark); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+	if err := server.store.AddBookmark(&bookmark); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
+
+	server.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
 
 	http.Redirect(w, r, bookmark.URL, 302)
 }
 
-func archiveBookmark(w http.ResponseWriter, r *http.Request) {
-	query := database.Update("bookmarks")
-	query.Set("archived", true)
-	query.Set("updated", time.Now())
-	query.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) bookmarkContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil {
+			jsonError(w, errors.New("Bookmark Not Found"), 404)
+			return
+		}
 
-	if _, err := query.Exec(); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+		bookmark := storage.Bookmark{ID: ID}
+
+		if err := server.store.GetBookmark(&bookmark); err != nil {
+			jsonError(w, errors.New("Bookmark Not Found"), 404)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), contextKeyBookmark, &bookmark)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (server *Server) archiveBookmark(w http.ResponseWriter, r *http.Request) {
+	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
+	bookmark.Archived = true
+
+	if err := server.store.UpdateBookmark(bookmark); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
 
 	jsonResponse(w, 204, nil)
 }
 
-func readitlaterBookmark(w http.ResponseWriter, r *http.Request) {
-	query := database.Update("bookmarks")
-	query.Set("archived", false)
-	query.Set("updated", time.Now())
-	query.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) readitlaterBookmark(w http.ResponseWriter, r *http.Request) {
+	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
+	bookmark.Archived = false
 
-	if _, err := query.Exec(); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+	if err := server.store.UpdateBookmark(bookmark); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
 
 	jsonResponse(w, 204, nil)
 }
 
-func deleteBookmark(w http.ResponseWriter, r *http.Request) {
-	query := database.Delete("bookmarks")
-	query.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) deleteBookmark(w http.ResponseWriter, r *http.Request) {
+	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
 
-	if _, err := query.Exec(); err != nil {
-		jsonError(w, err, 400) // TODO remove hard coded status code
+	if err := server.store.DeleteBookmark(bookmark); err != nil {
+		jsonError(w, err, 500)
 		return
 	}
 

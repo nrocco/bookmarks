@@ -1,96 +1,89 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/nrocco/bookmarks/pkg/storage"
 )
 
-type Item struct {
-	ID      int64
-	FeedID  int64
-	Created time.Time
-	Updated time.Time
-	Title   string
-	Date    time.Time
-	URL     string
-	Content string
-}
+var (
+	contextKeyFeedItem = contextKey("feedItem")
+)
 
-func itemsRouter() chi.Router {
+func itemsRouter(server *Server) chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", listItems)
+	r.Get("/", server.listFeedItems)
 	r.Route("/{id}", func(r chi.Router) {
-		r.Delete("/", deleteItem)
-		r.Post("/readitlater", readitlaterItem)
+		r.Use(server.feedItemContext)
+		r.Delete("/", server.deleteFeedItem)
+		r.Post("/readitlater", server.readItLaterFeedItem)
 	})
 
 	return r
 }
 
-func listItems(w http.ResponseWriter, r *http.Request) {
-	query := database.Select("items")
-	query.OrderBy("date", "DESC")
-	query.Limit(100) // TODO support limit and offset
+func (server *Server) listFeedItems(w http.ResponseWriter, r *http.Request) {
+	items, totalCount := server.store.ListFeedItems(&storage.ListFeedItemsOptions{
+		Search: r.URL.Query().Get("q"),
+		FeedID: r.URL.Query().Get("feed"),
+		Limit:  100, // TODO allow client to set this
+		Offset: 0,   // TODO allow client to set this
+	})
 
-	if feed := r.URL.Query().Get("feed"); feed != "" {
-		query.Where("feed_id = ?", feed)
-	}
+	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
 
-	items := []*Item{}
-
-	if _, err := query.Load(&items); err != nil {
-		http.Error(w, err.Error(), 400) // TODO remove hard coded status code
-		return
-	}
-
-	jsonResponse(w, 200, &items)
+	jsonResponse(w, 200, items)
 }
 
-func readitlaterItem(w http.ResponseWriter, r *http.Request) {
-	queryGet := database.Select("items")
-	queryGet.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) feedItemContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil {
+			jsonError(w, errors.New("Feed Item Not Found"), 404)
+			return
+		}
 
-	var item Item
+		item := storage.FeedItem{ID: ID}
 
-	if _, err := queryGet.Load(&item); err != nil {
+		if err := server.store.GetFeedItem(&item); err != nil {
+			jsonError(w, errors.New("Feed Not Found"), 404)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), contextKeyFeedItem, &item)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (server *Server) readItLaterFeedItem(w http.ResponseWriter, r *http.Request) {
+	item := r.Context().Value(contextKeyFeedItem).(*storage.FeedItem)
+
+	bookmark := item.ToBookmark()
+
+	if err := server.store.AddBookmark(bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	if item.ID == 0 {
-		jsonError(w, errors.New("Item not found"), 404)
-		return
-	}
-
-	bookmark := Bookmark{
-		URL: item.URL,
-	}
-
-	if err := AddBookmark(&bookmark); err != nil {
+	if err := server.store.DeleteFeedItem(item); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	queryDelete := database.Delete("items")
-	queryDelete.Where("id = ?", chi.URLParam(r, "id"))
-
-	if _, err := queryDelete.Exec(); err != nil {
-		jsonError(w, err, 500)
-		return
-	}
+	server.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
 
 	jsonResponse(w, 204, nil)
 }
 
-func deleteItem(w http.ResponseWriter, r *http.Request) {
-	query := database.Delete("items")
-	query.Where("id = ?", chi.URLParam(r, "id"))
+func (server *Server) deleteFeedItem(w http.ResponseWriter, r *http.Request) {
+	item := r.Context().Value(contextKeyFeedItem).(*storage.FeedItem)
 
-	if _, err := query.Exec(); err != nil {
+	if err := server.store.DeleteFeedItem(item); err != nil {
 		jsonError(w, err, 500)
 		return
 	}

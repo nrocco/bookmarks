@@ -2,3 +2,4 @@
 /build
 /run
 /pkg/server/bindata.go
+/pkg/storage/stopwords.go

@@ -68,6 +68,12 @@
   revision = "a7a4c189eb47ed33ce7b35f2880070a0c82a67d4"
 
 [[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
+  version = "v1.0.3"
+
+[[projects]]
   branch = "master"
   name = "github.com/ssor/bom"
   packages = ["."]
@@ -75,9 +81,21 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "2509b142fb2b797aa7587dad548f113b2c0f20ce"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context","html","html/atom","html/charset"]
   revision = "c73622c77280266305273cb545f54516ced95b93"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix","windows"]
+  revision = "661970f62f5897bc0cd5fdca7e087ba8a98a8fa1"
 
 [[projects]]
   branch = "master"
@@ -88,6 +106,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3fdb207207df17a611bed928da873767fb5440b57cea6ef5d5fec837b4bd3c4d"
+  inputs-digest = "c49afbcedc4f06393e597cd05d4c1168cbc8b92de3d8422de285c2e076cea467"
   solver-name = "gps-cdcl"
   solver-version = 1

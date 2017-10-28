@@ -2,15 +2,19 @@ package main
 
 import (
 	"flag"
-	"log"
 
+	"github.com/nrocco/bookmarks/pkg/queue"
+	"github.com/nrocco/bookmarks/pkg/scheduler"
 	"github.com/nrocco/bookmarks/pkg/server"
+	"github.com/nrocco/bookmarks/pkg/storage"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
 	// Workers stores the amount of workers that can do async tasks
 	Workers = flag.Int("workers", 4, "The number of workers to start")
-
+	// Interval controls how often feeds should be checked for new items
 	Interval = flag.Int("interval", 30, "Fetch new feeds with this interval in minutes")
 
 	// HTTPAddr stores the value for the --http option and defaults to 0.0.0.0:8000
@@ -21,11 +25,26 @@ var (
 )
 
 func main() {
+	// Parse flags
 	flag.Parse()
 
-	log.Printf("%d workers are serving bookmarks from %s at http://%s\n", *Workers, *Database, *HTTPAddr)
+	// Setup the database
+	store, err := storage.New(*Database)
+	if err != nil {
+		log.WithError(err).Fatal("Could not open the database")
+	}
 
-	if err := server.Start(*Database, *HTTPAddr, *Workers, *Interval); err != nil {
-		log.Fatal(err.Error())
+	// Setup the async job queue
+	queue := queue.New(store, *Workers)
+
+	// Setup the http server
+	server := server.New(store, queue)
+
+	// Setup the periodic scheduler
+	scheduler.New(store, queue, *Interval)
+
+	// Run the http server
+	if err := server.ListenAndServe(*HTTPAddr); err != nil {
+		log.WithError(err).Fatal("Stopped the server")
 	}
 }

@@ -11,7 +11,7 @@ GOARCH := $(shell go env GOARCH)
 
 build/$(BIN)-$(GOOS)-$(GOARCH): $(GO_FILES)
 	mkdir -p build
-	go generate pkg/server/*.go
+	go generate github.com/nrocco/bookmarks/pkg/...
 	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -x -v -a -o $@ ${PKG}
 
 .PHONY: lint
