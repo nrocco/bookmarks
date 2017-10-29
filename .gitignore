@@ -1,5 +1,5 @@
-/vendor
-/build
-/run
-/pkg/server/bindata.go
-/pkg/storage/stopwords.go
+vendor
+build
+server/bindata.go
+storage/stopwords.go
+frontend/node_modules/

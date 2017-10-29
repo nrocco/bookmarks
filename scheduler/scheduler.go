@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nrocco/bookmarks/pkg/queue"
-	"github.com/nrocco/bookmarks/pkg/storage"
+	"github.com/nrocco/bookmarks/queue"
+	"github.com/nrocco/bookmarks/storage"
 )
 
 // New starts a new scheduler that refreshes rrs/atom feeds

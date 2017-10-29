@@ -3,7 +3,7 @@ package queue
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/nrocco/bookmarks/pkg/storage"
+	"github.com/nrocco/bookmarks/storage"
 )
 
 // New returns a buffered channel that we can send work requests on.

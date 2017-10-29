@@ -3,10 +3,11 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/nrocco/bookmarks/pkg/queue"
-	"github.com/nrocco/bookmarks/pkg/storage"
+	"github.com/nrocco/bookmarks/queue"
+	"github.com/nrocco/bookmarks/storage"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -14,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//go:generate go-bindata -pkg server -o bindata.go -prefix ../../ ../../assets
+//go:generate go-bindata -pkg server -o bindata.go -prefix ../frontend/dist ../frontend/dist/...
 
 // New returns a new instance of Server
 func New(store *storage.Store, queue *queue.Queue) *Server {
@@ -30,23 +31,27 @@ func New(store *storage.Store, queue *queue.Queue) *Server {
 	server.router.Use(middleware.Recoverer)
 	server.router.Use(middleware.Timeout(60 * time.Second))
 
-	server.router.Mount("/bookmarks", bookmarksRouter(server))
-	server.router.Mount("/feeds", feedsRouter(server))
-	server.router.Mount("/items", itemsRouter(server))
+	server.router.Route("/api", func(r chi.Router) {
+		// TODO add authentication middleware
+		r.Mount("/bookmarks", bookmarksRouter(server))
+		r.Mount("/feeds", feedsRouter(server))
+		r.Mount("/items", itemsRouter(server))
+	})
 
-	// r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	a := "/index.html"
-	// 	if r.URL.Path != "/" {
-	// 		a = r.URL.Path
-	// 	}
-	// 	asset, _ := Asset("assets" + a)
-	// 	// TODO: check for error here
-	// 	w.Write(asset)
-	// }))
-
-	fs := http.FileServer(http.Dir("assets"))
 	server.router.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fs.ServeHTTP(w, r)
+		file := strings.TrimPrefix(r.URL.Path, "/")
+		if file == "" {
+			file = "index.html"
+		}
+
+		asset, err := Asset(file)
+		if err != nil {
+			w.WriteHeader(404)
+			return
+		}
+
+		w.WriteHeader(200)
+		w.Write(asset)
 	}))
 
 	return server

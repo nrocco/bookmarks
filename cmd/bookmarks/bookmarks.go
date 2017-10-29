@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 
-	"github.com/nrocco/bookmarks/pkg/queue"
-	"github.com/nrocco/bookmarks/pkg/scheduler"
-	"github.com/nrocco/bookmarks/pkg/server"
-	"github.com/nrocco/bookmarks/pkg/storage"
+	"github.com/nrocco/bookmarks/queue"
+	"github.com/nrocco/bookmarks/scheduler"
+	"github.com/nrocco/bookmarks/server"
+	"github.com/nrocco/bookmarks/storage"
 
 	log "github.com/sirupsen/logrus"
 )

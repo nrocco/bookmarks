@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
-	"github.com/nrocco/bookmarks/pkg/storage"
+	"github.com/nrocco/bookmarks/storage"
 )
 
 var (
