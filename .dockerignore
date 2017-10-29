@@ -1,8 +1,6 @@
-Dockerfile
-Makefile
-build
-run
-vendor
-frontend/node_modules/
-server/bindata.go
-storage/stopwords.go
+/build
+/vendor
+/frontend/node_modules
+/frontend/dist
+/server/bindata.go
+/storage/stopwords.go
