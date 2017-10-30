@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/storage"
 )
 
@@ -15,22 +16,27 @@ var (
 	contextKeyFeed = contextKey("feed")
 )
 
-func feedsRouter(server *Server) chi.Router {
+type feeds struct {
+	store *storage.Store
+	queue *queue.Queue
+}
+
+func (api feeds) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", server.listFeeds)
-	r.Post("/", server.postFeeds)
+	r.Get("/", api.list)
+	r.Post("/", api.create)
 	r.Route("/{id}", func(r chi.Router) {
-		r.Use(server.feedContext)
-		r.Delete("/", server.deleteFeed)
-		r.Post("/refresh", server.refreshFeed)
+		r.Use(api.middleware)
+		r.Delete("/", api.delete)
+		r.Post("/refresh", api.refresh)
 	})
 
 	return r
 }
 
-func (server *Server) listFeeds(w http.ResponseWriter, r *http.Request) {
-	feeds, totalCount := server.store.ListFeeds(&storage.ListFeedsOptions{
+func (api *feeds) list(w http.ResponseWriter, r *http.Request) {
+	feeds, totalCount := api.store.ListFeeds(&storage.ListFeedsOptions{
 		Search: r.URL.Query().Get("q"),
 		Limit:  50, // TODO allow client to set this
 		Offset: 0,  // TODO allow client to set this
@@ -41,7 +47,7 @@ func (server *Server) listFeeds(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, feeds)
 }
 
-func (server *Server) postFeeds(w http.ResponseWriter, r *http.Request) {
+func (api *feeds) create(w http.ResponseWriter, r *http.Request) {
 	var feed storage.Feed
 
 	decoder := json.NewDecoder(r.Body)
@@ -52,17 +58,17 @@ func (server *Server) postFeeds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := server.store.AddFeed(&feed); err != nil {
+	if err := api.store.AddFeed(&feed); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	server.queue.Schedule("Feed.Refresh", feed.ID)
+	api.queue.Schedule("Feed.Refresh", feed.ID)
 
 	jsonResponse(w, 200, &feed)
 }
 
-func (server *Server) feedContext(next http.Handler) http.Handler {
+func (api *feeds) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		if err != nil {
@@ -72,7 +78,7 @@ func (server *Server) feedContext(next http.Handler) http.Handler {
 
 		feed := storage.Feed{ID: ID}
 
-		if err := server.store.GetFeed(&feed); err != nil {
+		if err := api.store.GetFeed(&feed); err != nil {
 			jsonError(w, errors.New("Feed Not Found"), 404)
 			return
 		}
@@ -82,18 +88,18 @@ func (server *Server) feedContext(next http.Handler) http.Handler {
 	})
 }
 
-func (server *Server) refreshFeed(w http.ResponseWriter, r *http.Request) {
+func (api *feeds) refresh(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	server.queue.Schedule("Feed.Refresh", feed.ID)
+	api.queue.Schedule("Feed.Refresh", feed.ID)
 
 	jsonResponse(w, 204, nil)
 }
 
-func (server *Server) deleteFeed(w http.ResponseWriter, r *http.Request) {
+func (api *feeds) delete(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	if err := server.store.DeleteFeed(feed); err != nil {
+	if err := api.store.DeleteFeed(feed); err != nil {
 		jsonError(w, err, 500)
 		return
 	}

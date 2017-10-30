@@ -14,7 +14,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/jteeuwen/go-bindata/...
 RUN dep ensure && dep status
 RUN go generate github.com/nrocco/bookmarks/...
-RUN CGO_ENABLED=1 go build -x -v -a -o build/bookmarks github.com/nrocco/bookmarks/cmd/bookmarks
+RUN go build -v -o build/bookmarks github.com/nrocco/bookmarks/cmd/bookmarks
 
 FROM alpine:edge
 WORKDIR /var/lib/bookmarks

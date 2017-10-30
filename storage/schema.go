@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS items (
 	content TEXT NOT NULL,
 	FOREIGN KEY(feed_id) REFERENCES feeds(id)
 );
+CREATE TABLE IF NOT EXISTS users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	username VARCHAR(64) NOT NULL,
+	password VARCHAR(255) NOT NULL,
+	token VARCHAR(255) NOT NULL
+);
 `
 
 func (store *Store) migrate() error {

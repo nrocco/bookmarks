@@ -63,6 +63,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/nrocco/qb"
+  packages = ["."]
+  revision = "7926933597d702af42adbf193ae97b965e470751"
+
+[[projects]]
+  branch = "master"
   name = "github.com/olekukonko/tablewriter"
   packages = ["."]
   revision = "a7a4c189eb47ed33ce7b35f2880070a0c82a67d4"
@@ -82,7 +88,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = ["bcrypt","blowfish","ssh/terminal"]
   revision = "2509b142fb2b797aa7587dad548f113b2c0f20ce"
 
 [[projects]]
@@ -106,6 +112,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c49afbcedc4f06393e597cd05d4c1168cbc8b92de3d8422de285c2e076cea467"
+  inputs-digest = "f6c0652af10fd13cca4df46fc9ef0182d8eb18131ff03bf57d0658aaf72c3ebb"
   solver-name = "gps-cdcl"
   solver-version = 1

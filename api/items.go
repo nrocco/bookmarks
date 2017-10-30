@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/storage"
 )
 
@@ -14,21 +15,26 @@ var (
 	contextKeyFeedItem = contextKey("feedItem")
 )
 
-func itemsRouter(server *Server) chi.Router {
+type items struct {
+	store *storage.Store
+	queue *queue.Queue
+}
+
+func (api items) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", server.listFeedItems)
+	r.Get("/", api.list)
 	r.Route("/{id}", func(r chi.Router) {
-		r.Use(server.feedItemContext)
-		r.Delete("/", server.deleteFeedItem)
-		r.Post("/readitlater", server.readItLaterFeedItem)
+		r.Use(api.middleware)
+		r.Delete("/", api.delete)
+		r.Post("/readitlater", api.readitlater)
 	})
 
 	return r
 }
 
-func (server *Server) listFeedItems(w http.ResponseWriter, r *http.Request) {
-	items, totalCount := server.store.ListFeedItems(&storage.ListFeedItemsOptions{
+func (api *items) list(w http.ResponseWriter, r *http.Request) {
+	items, totalCount := api.store.ListFeedItems(&storage.ListFeedItemsOptions{
 		Search: r.URL.Query().Get("q"),
 		FeedID: r.URL.Query().Get("feed"),
 		Limit:  100, // TODO allow client to set this
@@ -40,7 +46,7 @@ func (server *Server) listFeedItems(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, items)
 }
 
-func (server *Server) feedItemContext(next http.Handler) http.Handler {
+func (api *items) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 		if err != nil {
@@ -50,7 +56,7 @@ func (server *Server) feedItemContext(next http.Handler) http.Handler {
 
 		item := storage.FeedItem{ID: ID}
 
-		if err := server.store.GetFeedItem(&item); err != nil {
+		if err := api.store.GetFeedItem(&item); err != nil {
 			jsonError(w, errors.New("Feed Not Found"), 404)
 			return
 		}
@@ -60,30 +66,30 @@ func (server *Server) feedItemContext(next http.Handler) http.Handler {
 	})
 }
 
-func (server *Server) readItLaterFeedItem(w http.ResponseWriter, r *http.Request) {
+func (api *items) readitlater(w http.ResponseWriter, r *http.Request) {
 	item := r.Context().Value(contextKeyFeedItem).(*storage.FeedItem)
 
 	bookmark := item.ToBookmark()
 
-	if err := server.store.AddBookmark(bookmark); err != nil {
+	if err := api.store.AddBookmark(bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	if err := server.store.DeleteFeedItem(item); err != nil {
+	if err := api.store.DeleteFeedItem(item); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	server.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
+	api.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
 
 	jsonResponse(w, 204, nil)
 }
 
-func (server *Server) deleteFeedItem(w http.ResponseWriter, r *http.Request) {
+func (api *items) delete(w http.ResponseWriter, r *http.Request) {
 	item := r.Context().Value(contextKeyFeedItem).(*storage.FeedItem)
 
-	if err := server.store.DeleteFeedItem(item); err != nil {
+	if err := api.store.DeleteFeedItem(item); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
