@@ -42,6 +42,10 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 		query.Where("(title LIKE ? OR url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
 	}
 
+	if !options.NotRefreshedSince.IsZero() {
+		query.Where("refreshed < ?", options.NotRefreshedSince)
+	}
+
 	feeds := []*Feed{}
 	totalCount := 0
 

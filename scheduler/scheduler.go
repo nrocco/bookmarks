@@ -17,6 +17,7 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 			go func() {
 				feeds, _ := store.ListFeeds(&storage.ListFeedsOptions{
 					NotRefreshedSince: time.Now().Add(-6 * time.Hour),
+					Limit:             100,
 				})
 
 				log.Printf("Found %d feeds that need refreshing", len(*feeds))
