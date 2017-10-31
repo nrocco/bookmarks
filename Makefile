@@ -2,7 +2,7 @@ BIN := bookmarks
 PKG := github.com/nrocco/bookmarks/cmd/bookmarks
 VERSION := $(shell git describe --tags --always --dirty)
 PKG_LIST := $(shell go list ${PKG}/... | grep -v ${PKG}/vendor/)
-GO_FILES := $(shell find * -type d -name vendor -prune -or -name '*.go' -type f | grep -v vendor)
+GO_FILES := $(shell git ls-files '*.go')
 
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)

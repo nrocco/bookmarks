@@ -1,6 +1,8 @@
 package storage
 
 const schema = `
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS bookmarks (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	created DATE DEFAULT (datetime('now')),
@@ -37,6 +39,8 @@ CREATE TABLE IF NOT EXISTS users (
 	password VARCHAR(255) NOT NULL,
 	token VARCHAR(255) NOT NULL
 );
+
+COMMIT;
 `
 
 func (store *Store) migrate() error {

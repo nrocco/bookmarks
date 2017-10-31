@@ -31,6 +31,7 @@
         <div class="content has-text-centered is-size-7">
           <p>Made with love by CasaDiRocco</p>
           <p><a @click.prevent="open=true">bookmarklet</a></p>
+          <p><a @click.prevent="logout">logout</a></p>
         </div>
       </div>
     </footer>
@@ -64,6 +65,13 @@ export default {
     },
     color () {
       return this.$route.meta.color
+    }
+  },
+  methods: {
+    logout (event) {
+      this.$http.delete('/token').then(response => {
+        console.log(response)
+      })
     }
   }
 }

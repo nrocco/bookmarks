@@ -21,8 +21,6 @@
 </template>
 
 <script>
-import axios from 'axios'
-
 export default {
   data () {
     return {
@@ -44,13 +42,13 @@ export default {
       this.$router.push({query: {feed: this.selected}})
     },
     onReadItLaterClicked (item) {
-      axios.post(`/api/items/{item.ID}/readitlater`).then(response => {
-        this.items.splice(self.items.indexOf(item), 1)
+      this.$http.post(`/items/{item.ID}/readitlater`).then(response => {
+        this.items.splice(this.items.indexOf(item), 1)
       })
     },
     onRemoveClicked (item) {
-      axios.delete(`/api/items/${item.ID}`).then(response => {
-        this.items.splice(self.items.indexOf(item), 1)
+      this.$http.delete(`/items/${item.ID}`).then(response => {
+        this.items.splice(this.items.indexOf(item), 1)
       })
     },
     fetchFeeds () {
@@ -59,10 +57,10 @@ export default {
         payload.feed = this.selected
       }
 
-      axios.get(`/api/items`, {params: payload}).then(response => {
+      this.$http.get(`/items`, {params: payload}).then(response => {
         this.items = response.data
       })
-      axios.get('/api/feeds').then(response => {
+      this.$http.get('/feeds').then(response => {
         this.feeds = response.data
       })
     }

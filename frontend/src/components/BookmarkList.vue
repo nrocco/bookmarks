@@ -17,8 +17,6 @@
 </template>
 
 <script>
-import axios from 'axios'
-
 export default {
   data () {
     return {
@@ -39,18 +37,18 @@ export default {
       this.$router.push({query: {q: this.q}})
     },
     onReadItLaterClicked (bookmark) {
-      axios.post(`/api/bookmarks/${bookmark.ID}/readitlater`).then(response => {
-        this.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1)
+      this.$http.post(`/bookmarks/${bookmark.ID}/readitlater`).then(response => {
+        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     },
     onArchiveClicked (bookmark) {
-      axios.post(`/api/bookmarks/${bookmark.ID}/archive`).then(response => {
-        this.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1)
+      this.$http.post(`/bookmarks/${bookmark.ID}/archive`).then(response => {
+        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     },
     onRemoveClicked (bookmark) {
-      axios.delete(`/api/bookmarks/${bookmark.ID}`).then(response => {
-        this.bookmarks.splice(self.bookmarks.indexOf(bookmark), 1)
+      this.$http.delete(`/bookmarks/${bookmark.ID}`).then(response => {
+        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     },
     fetchBookmarks () {
@@ -63,7 +61,7 @@ export default {
         payload.q = this.q
       }
 
-      axios.get(`/api/bookmarks`, {params: payload}).then(response => {
+      this.$http.get(`/bookmarks`, {params: payload}).then(response => {
         this.bookmarks = response.data
       })
     }
