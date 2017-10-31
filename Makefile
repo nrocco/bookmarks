@@ -38,8 +38,12 @@ clean:
 build: build/$(BIN)-$(GOOS)-$(GOARCH)
 
 .PHONY: container
-container:
-	docker build --pull -t "nrocco/bookmarks" .
+container: version
+	docker build -t "nrocco/bookmarks:latest" .
+
+.PHONY: push
+push: container
+	docker push "nrocco/bookmarks:latest"
 
 bindata/favicon.ico:
 	convert bindata/apple-touch-icon.png -define icon:auto-resize=64,48,32,16 bindata/favicon.ico
