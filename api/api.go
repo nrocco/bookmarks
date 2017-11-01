@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,21 +36,7 @@ func New(store *storage.Store, queue *queue.Queue) *API {
 		r.Mount("/items", items{store, queue}.Routes())
 	})
 
-	r.Get("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		file := strings.TrimPrefix(r.URL.Path, "/")
-		if file == "" {
-			file = "index.html"
-		}
-
-		asset, err := Asset(file)
-		if err != nil {
-			w.WriteHeader(404)
-			return
-		}
-
-		w.WriteHeader(200)
-		w.Write(asset)
-	}))
+	r.Get("/*", bindataAssetHandler)
 
 	return &API{r}
 }
@@ -78,4 +66,24 @@ func jsonResponse(w http.ResponseWriter, code int, object interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(object)
+}
+
+func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
+	file := strings.TrimPrefix(r.URL.Path, "/")
+	if file == "" {
+		file = "index.html"
+	}
+
+	asset, err := Asset(file)
+	if err != nil {
+		w.WriteHeader(404)
+		return
+	}
+
+	if mimetype := mime.TypeByExtension(filepath.Ext(file)); mimetype != "" {
+		w.Header().Set("Content-Type", mimetype)
+	}
+
+	w.WriteHeader(200)
+	w.Write(asset)
 }

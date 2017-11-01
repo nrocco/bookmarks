@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+
 import Base from '@/components/Base'
 import BookmarkList from '@/components/BookmarkList'
 import FeedList from '@/components/FeedList'
