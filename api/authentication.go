@@ -13,14 +13,7 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 	f := func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == "DELETE" && r.URL.Path == "/api/token" {
-				http.SetCookie(w, &http.Cookie{
-					Name:     "token",
-					Path:     "/",
-					HttpOnly: true,
-					Value:    "",
-					Expires:  time.Unix(0, 0),
-					MaxAge:   -1,
-				})
+				setTokenCookie(w, "", time.Unix(0, 0))
 				return
 			}
 
@@ -33,13 +26,7 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 					return
 				}
 
-				http.SetCookie(w, &http.Cookie{
-					Name:     "token",
-					Path:     "/",
-					HttpOnly: true,
-					Value:    store.UserToken(username),
-					Expires:  time.Now().Add(7 * 24 * time.Hour),
-				})
+				setTokenCookie(w, store.UserToken(username), time.Now().Add(7*24*time.Hour))
 
 				if next := r.PostFormValue("next"); next != "" {
 					http.Redirect(w, r, next, 301)
@@ -61,8 +48,7 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 				return
 			}
 
-			cookie.Expires = time.Now().Add(7 * 24 * time.Hour)
-			http.SetCookie(w, cookie)
+			setTokenCookie(w, cookie.Value, time.Now().Add(7*24*time.Hour))
 
 			// Token is authenticated, pass it through
 			next.ServeHTTP(w, r)
@@ -70,4 +56,14 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 		return http.HandlerFunc(fn)
 	}
 	return f
+}
+
+func setTokenCookie(w http.ResponseWriter, value string, expires time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Path:     "/",
+		HttpOnly: true,
+		Value:    value,
+		Expires:  expires,
+	})
 }
