@@ -1,4 +1,5 @@
 FROM node:8-alpine as npmbuilder
+ARG VERSION
 WORKDIR /src
 COPY frontend ./
 RUN npm install --no-progress
@@ -6,6 +7,7 @@ RUN npm run lint --no-progress
 RUN npm run build --production --no-progress
 
 FROM golang:1.9-alpine AS gobuilder
+ARG VERSION
 WORKDIR /go/src/github.com/nrocco/bookmarks
 COPY . ./
 COPY --from=npmbuilder /src/dist ./frontend/dist/
@@ -14,7 +16,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get -u github.com/jteeuwen/go-bindata/...
 RUN dep ensure && dep status
 RUN go generate github.com/nrocco/bookmarks/...
-RUN go build -v -o build/bookmarks github.com/nrocco/bookmarks/cmd/bookmarks
+RUN go build -v -o build/bookmarks -ldflags "-X main.Version=${VERSION}" github.com/nrocco/bookmarks/cmd/bookmarks
 
 FROM alpine:edge
 WORKDIR /var/lib/bookmarks

@@ -6,7 +6,7 @@ import (
 
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/mmcdole/gofeed"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type Feed struct {
@@ -99,7 +99,7 @@ func (store *Store) AddFeed(feed *Feed) error {
 	query.Columns("created", "updated", "refreshed", "title", "url")
 	query.Record(feed)
 
-	l := log.WithFields(log.Fields{
+	l := logrus.WithFields(logrus.Fields{
 		"id":    feed.ID,
 		"title": feed.Title,
 		"url":   feed.URL,
@@ -179,9 +179,11 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	}
 
 	fp := gofeed.NewParser()
+	l := logrus.WithField("feed", feed.ID)
 
 	parsedFeed, err := fp.ParseURL(feed.URL)
 	if err != nil {
+		l.WithError(err).Warn("Unable to parse feed")
 		return err
 	}
 
@@ -191,8 +193,10 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 			date = item.UpdatedParsed
 		}
 
+		l := l.WithField("title", item.Title)
+
 		if date.Before(feed.Refreshed) {
-			log.Printf("Ignoring '%s' since we already fetched it before", item.Title)
+			l.Debug("Ignoring since we already fetched it before")
 			continue
 		}
 
@@ -206,7 +210,9 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		query.Values(feed.ID, time.Now(), time.Now(), item.Title, item.Link, date, content)
 
 		if _, err := query.Exec(); err != nil {
-			log.Println(err)
+			l.WithError(err).Warn("Unable to persist feed item")
+		} else {
+			l.Info("Persisted feed item")
 		}
 	}
 
@@ -216,6 +222,8 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	if err := store.UpdateFeed(feed); err != nil {
 		return err
 	}
+
+	l.Debug("Feed.refreshed updated")
 
 	return nil
 }

@@ -1,5 +1,6 @@
 'use strict'
 const path = require('path')
+const webpack = require('webpack')
 const utils = require('./utils')
 const config = require('../config')
 const vueLoaderConfig = require('./vue-loader.conf')
@@ -12,6 +13,12 @@ module.exports = {
   entry: {
     app: './src/main.js'
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': config.dev.env,
+      'VERSION': JSON.stringify(process.env.VERSION || 'unknown')
+    }),
+  ],
   output: {
     path: config.build.assetsRoot,
     filename: '[name].js',
@@ -23,7 +30,7 @@ module.exports = {
     extensions: ['.js', '.vue', '.json'],
     alias: {
       'vue$': 'vue/dist/vue.esm.js',
-      '@': resolve('src'),
+      '@': resolve('src')
     }
   },
   module: {
@@ -53,14 +60,6 @@ module.exports = {
         options: {
           limit: 10000,
           name: utils.assetsPath('img/[name].[hash:7].[ext]')
-        }
-      },
-      {
-        test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/,
-        loader: 'url-loader',
-        options: {
-          limit: 10000,
-          name: utils.assetsPath('media/[name].[hash:7].[ext]')
         }
       },
       {
