@@ -15,7 +15,9 @@ type Feed struct {
 	Updated   time.Time
 	Refreshed time.Time
 	Title     string
+	Category  string
 	URL       string
+	Items     int
 }
 
 // Validate is used to assert Title and URL are set
@@ -24,11 +26,16 @@ func (feed *Feed) Validate() error {
 		return errors.New("Missing Feed.URL")
 	}
 
+	if feed.Category == "" {
+		return errors.New("Missing Feed.Category")
+	}
+
 	return nil
 }
 
 type ListFeedsOptions struct {
 	Search            string
+	Category          string
 	NotRefreshedSince time.Time
 	Limit             int
 	Offset            int
@@ -36,24 +43,33 @@ type ListFeedsOptions struct {
 
 // ListFeeds fetches multiple feeds from the database
 func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
-	query := store.db.Select("feeds")
+	query := store.db.Select("feeds f")
 
 	if options.Search != "" {
-		query.Where("(title LIKE ? OR url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("(f.title LIKE ? OR f.url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
+	}
+
+	if options.Category != "" {
+		query.Where("f.category = ?", options.Category)
 	}
 
 	if !options.NotRefreshedSince.IsZero() {
-		query.Where("refreshed < ?", options.NotRefreshedSince)
+		query.Where("f.refreshed < ?", options.NotRefreshedSince)
 	}
 
 	feeds := []*Feed{}
 	totalCount := 0
 
-	query.Columns("COUNT(id)")
+	query.Columns("COUNT(f.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("*")
-	query.OrderBy("refreshed", "DESC")
+	// select f.*, count(i.id) items from feeds f left join items i on i.feed_id = f.id group by f.id;
+
+	query.Join("LEFT JOIN items i ON i.feed_id = f.id")
+	query.GroupBy("f.id")
+
+	query.Columns("f.*", "COUNT(i.id) AS items")
+	query.OrderBy("f.refreshed", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&feeds)
@@ -96,13 +112,14 @@ func (store *Store) AddFeed(feed *Feed) error {
 	feed.Refreshed = time.Time{}
 
 	query := store.db.Insert("feeds")
-	query.Columns("created", "updated", "refreshed", "title", "url")
+	query.Columns("created", "updated", "refreshed", "title", "url", "category")
 	query.Record(feed)
 
 	l := logrus.WithFields(logrus.Fields{
-		"id":    feed.ID,
-		"title": feed.Title,
-		"url":   feed.URL,
+		"id":       feed.ID,
+		"title":    feed.Title,
+		"url":      feed.URL,
+		"category": feed.Category,
 	})
 
 	if _, err := query.Exec(); err != nil {
@@ -117,8 +134,6 @@ func (store *Store) AddFeed(feed *Feed) error {
 	}
 
 	l.Info("Persisted feed")
-
-	// TODO move this: WorkQueue <- WorkRequest{Type: "Feed.Refresh", Feed: *feed}
 
 	return nil
 }
@@ -140,6 +155,7 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query.Set("refreshed", feed.Refreshed)
 	query.Set("title", feed.Title)
 	query.Set("url", feed.URL)
+	query.Set("category", feed.Category)
 	query.Where("id = ?", feed.ID)
 
 	if _, err := query.Exec(); err != nil {
