@@ -4,6 +4,9 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import client from './client'
+import moment from 'vue-moment'
+
+Vue.use(moment)
 
 Vue.config.productionTip = false
 Vue.prototype.$http = client
