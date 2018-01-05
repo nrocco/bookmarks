@@ -20,8 +20,12 @@ type Feed struct {
 	Items     int
 }
 
-// Validate is used to assert Title and URL are set
+// Validate is used to assert Title, URL and Category are set
 func (feed *Feed) Validate() error {
+	if feed.Title == "" {
+		return errors.New("Missing Feed.Title")
+	}
+
 	if feed.URL == "" {
 		return errors.New("Missing Feed.URL")
 	}
@@ -101,6 +105,10 @@ func (store *Store) GetFeed(feed *Feed) error {
 func (store *Store) AddFeed(feed *Feed) error {
 	if feed.ID != 0 {
 		return errors.New("Existing feed")
+	}
+
+	if feed.Title == "" {
+		feed.Title = feed.URL
 	}
 
 	if err := feed.Validate(); err != nil {
