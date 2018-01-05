@@ -43,32 +43,38 @@ func (item *FeedItem) ToBookmark() *Bookmark {
 }
 
 type ListFeedItemsOptions struct {
-	Search string
-	FeedID string
-	Limit  int
-	Offset int
+	Search   string
+	Category string
+	FeedID   string
+	Limit    int
+	Offset   int
 }
 
 // ListFeedItems fetches multiple feeds from the database
 func (store *Store) ListFeedItems(options *ListFeedItemsOptions) (*[]*FeedItem, int) {
-	query := store.db.Select("items")
+	query := store.db.Select("items i")
 
 	if options.Search != "" {
-		query.Where("(title LIKE ? OR url LIKE ? OR content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("(i.title LIKE ? OR i.url LIKE ? OR i.content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
+	}
+
+	if options.Category != "" {
+		query.Join("LEFT JOIN feeds f ON i.feed_id = f.id")
+		query.Where("f.category = ?", options.Category)
 	}
 
 	if options.FeedID != "" {
-		query.Where("feed_id = ?", options.FeedID)
+		query.Where("i.feed_id = ?", options.FeedID)
 	}
 
 	feedItems := []*FeedItem{}
 	totalCount := 0
 
-	query.Columns("COUNT(id)")
+	query.Columns("COUNT(i.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("*")
-	query.OrderBy("date", "DESC")
+	query.Columns("i.*")
+	query.OrderBy("i.date", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&feedItems)
