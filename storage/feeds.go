@@ -10,14 +10,15 @@ import (
 )
 
 type Feed struct {
-	ID        int64
-	Created   time.Time
-	Updated   time.Time
-	Refreshed time.Time
-	Title     string
-	Category  string
-	URL       string
-	Items     int
+	ID           int64
+	Created      time.Time
+	Updated      time.Time
+	Refreshed    time.Time
+	LastAuthored time.Time
+	Title        string
+	Category     string
+	URL          string
+	Items        int
 }
 
 // Validate is used to assert Title, URL and Category are set
@@ -161,6 +162,7 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query := store.db.Update("feeds")
 	query.Set("updated", feed.Updated)
 	query.Set("refreshed", feed.Refreshed)
+	query.Set("last_authored", feed.LastAuthored)
 	query.Set("title", feed.Title)
 	query.Set("url", feed.URL)
 	query.Set("category", feed.Category)
@@ -211,6 +213,8 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return err
 	}
 
+	isFirstItem := true
+
 	for _, item := range parsedFeed.Items {
 		date := item.PublishedParsed
 		if date == nil {
@@ -218,6 +222,11 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		}
 
 		l := l.WithField("title", item.Title)
+
+		if isFirstItem {
+			feed.LastAuthored = *date
+			isFirstItem = false
+		}
 
 		if date.Before(feed.Refreshed) {
 			l.Debug("Ignoring since we already fetched it before")

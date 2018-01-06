@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS feeds (
 	created DATE DEFAULT (datetime('now')),
 	updated DATE DEFAULT (datetime('now')),
 	refreshed DATE DEFAULT (datetime('now')),
+	authored DATE DEFAULT (datetime('now')),
 	title VARCHAR(64) NOT NULL,
 	category VARCHAR(64) DEFAULT 'default',
 	url VARCHAR(255) UNIQUE NOT NULL
