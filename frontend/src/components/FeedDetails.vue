@@ -45,7 +45,7 @@ export default {
       onRefreshFeedClicked: 'refreshFeed',
       onDeleteFeedClicked: 'deleteFeed',
       onReadItLaterClicked: 'readLaterFeedItem',
-      onRemoveClicked: 'deleteFeedItem'
+      onRemoveClicked: 'removeFeedItem'
     })
   },
   filters: {
