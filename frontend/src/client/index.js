@@ -1,6 +1,6 @@
-import axios from 'axios'
+import Axios from 'axios'
 
-let client = axios.create({
+let client = Axios.create({
   baseURL: `/api`,
   withCredentials: true
 })

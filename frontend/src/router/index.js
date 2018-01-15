@@ -20,26 +20,27 @@ export default new Router({
       component: Base,
       children: [
         {
+          name: 'readitlater',
           path: '/',
           component: BookmarkList,
           meta: {
             title: 'Read it later',
             subtitle: 'All articles you recently saved',
-            archived: false,
             color: 'is-primary'
           }
         },
         {
+          name: 'archive',
           path: '/archive',
           component: BookmarkList,
           meta: {
             title: 'Archive',
             subtitle: 'All articles you archived',
-            archived: true,
             color: 'is-dark'
           }
         },
         {
+          name: 'feeds',
           path: '/feeds',
           component: FeedList,
           meta: {

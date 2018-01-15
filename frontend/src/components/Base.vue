@@ -81,7 +81,7 @@
 
 <style scoped>
   .logout {
-    margin-top: 1em;
-    margin-right: 2em;
+    margin-top: 1rem;
+    margin-right: 2rem;
   }
 </style>

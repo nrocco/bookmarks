@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="block control">
-      <input class="input" type="search" placeholder="Search" v-model="q" autofocus @search="onSearch">
+      <input class="input" type="search" placeholder="Search" v-model="filter" autofocus @search="onSearch">
     </div>
     <div class="block" v-for="bookmark in bookmarks" :key="bookmark.ID">
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
@@ -17,11 +17,23 @@
 </template>
 
 <script>
+import { mapActions } from 'vuex'
+
 export default {
   data () {
-    return {
-      bookmarks: [],
-      q: ''
+    return {}
+  },
+  computed: {
+    filter: {
+      get () {
+        return this.$store.state.bookmarks.filter
+      },
+      set (value) {
+        this.$store.commit('filter', value)
+      }
+    },
+    bookmarks () {
+      return this.$store.state.bookmarks.bookmarks
     }
   },
   filters: {
@@ -34,45 +46,12 @@ export default {
   },
   methods: {
     onSearch (event) {
-      this.$router.push({query: {q: this.q}})
+      this.$router.push({query: {q: this.filter}})
     },
-    onReadItLaterClicked (bookmark) {
-      this.$http.post(`/bookmarks/${bookmark.ID}/readitlater`).then(response => {
-        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
-      })
-    },
-    onArchiveClicked (bookmark) {
-      this.$http.post(`/bookmarks/${bookmark.ID}/archive`).then(response => {
-        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
-      })
-    },
-    onRemoveClicked (bookmark) {
-      this.$http.delete(`/bookmarks/${bookmark.ID}`).then(response => {
-        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
-      })
-    },
-    fetchBookmarks () {
-      var payload = {}
-
-      if (this.$route.meta.archived) {
-        payload.archived = 'true'
-      }
-      if (this.q !== '') {
-        payload.q = this.q
-      }
-
-      this.$http.get(`/bookmarks`, {params: payload}).then(response => {
-        this.bookmarks = response.data
-      })
-    }
-  },
-  beforeRouteUpdate (to, from, next) {
-    next()
-    this.fetchBookmarks()
-  },
-  beforeRouteEnter (to, from, next) {
-    next(vm => {
-      vm.fetchBookmarks()
+    ...mapActions({
+      onReadItLaterClicked: 'readLaterBookmark',
+      onArchiveClicked: 'archiveBookmark',
+      onRemoveClicked: 'removeBookmark'
     })
   }
 }

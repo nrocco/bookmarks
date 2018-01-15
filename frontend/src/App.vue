@@ -4,7 +4,15 @@
 
 <script>
 export default {
-  name: 'app'
+  name: 'app',
+  watch: {
+    '$route' (to, from) {
+      this.$store.dispatch(to.name, to)
+    }
+  },
+  mounted () {
+    this.$store.dispatch(this.$route.name, this.$route)
+  }
 }
 </script>
 
