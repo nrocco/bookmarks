@@ -53,8 +53,12 @@ func main() {
 	// Setup the http server
 	api := api.New(store, queue)
 
-	// Setup the periodic scheduler
-	scheduler.New(store, queue, *Interval)
+	if *Interval != 0 {
+		// Setup the periodic scheduler
+		scheduler.New(store, queue, *Interval)
+	} else {
+		logrus.Info("Scheduler is not enabled")
+	}
 
 	// Run the http server
 	if err := api.ListenAndServe(*HTTPAddr); err != nil {
