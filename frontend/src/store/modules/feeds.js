@@ -46,7 +46,6 @@ const actions = {
   },
   refreshFeed (context, feed) {
     client.post(`/feeds/${feed.ID}/refresh`).then(response => {
-      this.$emit('refreshed', feed)
       // TODO sleep a second
       // TODO load items again
     })
@@ -89,6 +88,14 @@ const mutations = {
   },
   removeItem (state, item) {
     state.items.splice(state.items.indexOf(item), 1)
+
+    let feed = state.feeds.find(feed => {
+      return feed.ID === item.FeedID
+    })
+
+    if (feed) {
+      feed.Items -= 1
+    }
   }
 }
 
