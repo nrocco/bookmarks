@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jaytaylor/html2text"
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/mmcdole/gofeed"
 	"github.com/sirupsen/logrus"
@@ -236,6 +237,12 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		content := item.Content
 		if content == "" {
 			content = item.Description
+		}
+
+		content, err = html2text.FromString(content)
+		if err != nil {
+			l.WithError(err).Warn("Error converting html to text")
+			return err
 		}
 
 		query := store.db.Insert("items")
