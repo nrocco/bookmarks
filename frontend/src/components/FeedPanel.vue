@@ -1,6 +1,12 @@
 <template>
   <nav class="panel">
     <p class="panel-heading">Feeds</p>
+
+    <p class="panel-tabs">
+      <a :class="{'is-active': unreadOnly}" @click.prevent="unreadOnly=true">unread</a>
+      <a :class="{'is-active': !unreadOnly}" @click.prevent="unreadOnly=false">all</a>
+    </p>
+
     <div class="panel-block">
       <div class="field has-addons">
         <div class="control has-icons-left is-expanded">
@@ -43,6 +49,7 @@ export default {
   data () {
     return {
       selectedCategory: null,
+      unreadOnly: true,
       newFeed: null,
       filter: ''
     }
@@ -63,7 +70,7 @@ export default {
   computed: {
     filteredFeeds () {
       return this.$store.getters.feeds.filter(feed => {
-        return (!this.selectedCategory || feed.Category === this.selectedCategory) && feed.Title.toLowerCase().indexOf(this.filter.toLowerCase()) > -1
+        return ((this.unreadOnly && feed.Items > 0) || !this.unreadOnly) && (!this.selectedCategory || feed.Category === this.selectedCategory) && feed.Title.toLowerCase().indexOf(this.filter.toLowerCase()) > -1
       })
     },
     categories () {

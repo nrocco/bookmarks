@@ -1,15 +1,13 @@
 <template>
   <div class="block">
+    <div class="pull-right">
+      <a class="button is-small is-primary is-outlined" @click.prevent="onRefreshFeedClicked(feed)">Refresh Feed</a>
+      <a class="button is-small is-danger is-outlined" @click.prevent="onDeleteFeedClicked(feed)">Delete Feed</a>
+    </div>
     <h1 class="title">{{ feed.Title }}</h1>
     <h2 class="subtitle">{{ feed.URL }}</h2>
-    <div class="block">
-      <span :title="feed.LastAuthored|moment('dddd, MMMM Do YYYY, HH:mm')"><i>Last item created at:</i> {{ feed.LastAuthored|moment("from") }}</span>
-    </div>
-    <div class="block">
-      <span :title="feed.Refreshed|moment('dddd, MMMM Do YYYY, HH:mm')"><i>Last refreshed at:</i> {{ feed.Refreshed|moment("from") }}</span>
-      <a class="button is-small is-primary is-outlined" @click.prevent="onRefreshFeedClicked(feed)">Refresh</a>
-      <a class="button is-small is-danger is-outlined" @click.prevent="onDeleteFeedClicked(feed)">Delete</a>
-    </div>
+    <p><i :title="feed.LastAuthored|moment('dddd, MMMM Do YYYY, HH:mm')">Last item created {{ feed.LastAuthored|moment("from") }}</i></p>
+    <p><i :title="feed.Refreshed|moment('dddd, MMMM Do YYYY, HH:mm')">Last refreshed {{ feed.Refreshed|moment("from") }}</i></p>
     <hr />
     <div v-if="items.length > 0">
       <div v-for="item in items" :key="item.ID">
