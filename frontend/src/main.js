@@ -5,6 +5,8 @@ import Moment from 'vue-moment'
 import router from './router'
 import store from './store'
 
+import 'bulma/css/bulma.css'
+
 Vue.use(Moment)
 
 Vue.config.productionTip = false

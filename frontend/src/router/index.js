@@ -2,9 +2,10 @@ import Vue from 'vue'
 import Router from 'vue-router'
 
 import Base from '@/components/Base'
+import Login from '@/components/Login'
+
 import BookmarkList from '@/components/BookmarkList'
 import FeedList from '@/components/FeedList'
-import Login from '@/components/Login'
 
 Vue.use(Router)
 
