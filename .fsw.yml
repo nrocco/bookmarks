@@ -7,7 +7,7 @@ triggers:
   - '!frontend/**/*'
   env:
     DEBUG: "1"
-  cmd: go run -ldflags "-X main.Version=-1" cmd/bookmarks/bookmarks.go -workers 1 -debug -database .git/run/data.sqlite
+  cmd: go run -ldflags "-X main.Version=dev-server" cmd/bookmarks/bookmarks.go -interval 0 -workers 1 -debug -database .git/run/data.sqlite
   shell: true
   delay: 100ms
   stop_timeout: 500ms

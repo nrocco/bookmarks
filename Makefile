@@ -1,5 +1,6 @@
 BIN := bookmarks
 PKG := github.com/nrocco/bookmarks
+CONTAINER := nrocco/bookmarks
 VERSION := $(shell git describe --tags --always --dirty)
 PKG_LIST := $(shell go list ${PKG}/... | grep -v ${PKG}/vendor/)
 GO_FILES := $(shell git ls-files '*.go')
@@ -47,11 +48,11 @@ build: build/${BIN}-${GOOS}-${GOARCH}
 
 .PHONY: container
 container: version
-	docker build --build-arg "VERSION=${VERSION}" -t "nrocco/${BIN}:${VERSION}" .
+	docker build --build-arg "VERSION=${VERSION}" -t "${CONTAINER}:${VERSION}" .
 
 .PHONY: push
 push: container
-	docker push "nrocco/${BIN}:${VERSION}"
+	docker push "${CONTAINER}:${VERSION}"
 
 .PHONY: frontend
 frontend:
