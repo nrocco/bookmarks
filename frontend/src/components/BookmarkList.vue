@@ -3,7 +3,7 @@
     <div class="block control">
       <input class="input" type="search" placeholder="Search" v-model="filter" autofocus @search="onSearch">
     </div>
-    <div class="block" v-for="bookmark in bookmarks" :key="bookmark.ID">
+    <div class="block bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
       <p class="is-size-7"><a :href="bookmark.URL">{{ bookmark.URL }}</a></p>
       <p class="content">{{ bookmark.Content|excerpt }}</p>
@@ -58,4 +58,11 @@ export default {
 </script>
 
 <style>
+.bookmark {
+  border-bottom: 1px solid hsl(0, 0%, 96%);
+  padding-bottom: 1.5rem;
+}
+.content:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
 </style>

@@ -10,7 +10,7 @@
     <p><i :title="feed.Refreshed|moment('dddd, MMMM Do YYYY, HH:mm')">Last refreshed {{ feed.Refreshed|moment("from") }}</i></p>
     <hr />
     <div v-if="items.length > 0">
-      <div v-for="item in items" :key="item.ID">
+      <div class="block feed-item" v-for="item in items" :key="item.ID">
         <p class="has-text-weight-bold">{{ item.Title }}</p>
         <p class="is-size-7"><a :href="item.URL">{{ item.URL }}</a></p>
         <p class="content">{{ item.Content|excerpt }}</p>
@@ -58,4 +58,11 @@ export default {
 </script>
 
 <style>
+.feed-item {
+  border-bottom: 1px solid hsl(0, 0%, 96%);
+  padding-bottom: 1.5rem;
+}
+.content:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
 </style>
