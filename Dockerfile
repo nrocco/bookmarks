@@ -1,4 +1,4 @@
-FROM node:8-alpine as npmbuilder
+FROM node:alpine as npmbuilder
 ARG VERSION
 WORKDIR /src
 COPY frontend ./
@@ -6,7 +6,7 @@ RUN npm install --no-progress
 RUN npm run lint --no-progress
 RUN npm run build --production --no-progress
 
-FROM golang:1.9-alpine AS gobuilder
+FROM golang:alpine AS gobuilder
 ARG VERSION
 WORKDIR /go/src/github.com/nrocco/bookmarks
 COPY . ./
