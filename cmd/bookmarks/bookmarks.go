@@ -7,7 +7,8 @@ import (
 	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/scheduler"
 	"github.com/nrocco/bookmarks/storage"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -34,17 +35,25 @@ func main() {
 	// Parse flags
 	flag.Parse()
 
+	log.Info().
+		Bool("debug", *Debug).
+		Int("workers", *Workers).
+		Int("interval", *Interval).
+		Str("http", *HTTPAddr).
+		Str("database", *Database).
+		Msg("Starting bookmarks")
+
 	// Setup the global logger
 	if *Debug {
-		logrus.SetLevel(logrus.DebugLevel)
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	} else {
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
-
-	logrus.Infof("Version: %s", Version)
 
 	// Setup the database
 	store, err := storage.New(*Database)
 	if err != nil {
-		logrus.WithError(err).Fatal("Could not open the database")
+		log.Fatal().Err(err).Msg("Could not open the database")
 	}
 
 	// Setup the async job queue
@@ -57,11 +66,13 @@ func main() {
 		// Setup the periodic scheduler
 		scheduler.New(store, queue, *Interval)
 	} else {
-		logrus.Info("Scheduler is not enabled")
+		log.Info().Msg("Scheduler is not enabled")
 	}
 
 	// Run the http server
 	if err := api.ListenAndServe(*HTTPAddr); err != nil {
-		logrus.WithError(err).Fatal("Stopped the api server")
+		log.Warn().Err(err).Msg("Stopped the api server")
 	}
+
+	log.Info().Msg("Stopping bookmarks")
 }

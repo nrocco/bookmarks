@@ -11,7 +11,7 @@ import (
 	"github.com/JalfResi/justext"
 	"github.com/jaytaylor/html2text"
 	sqlite3 "github.com/mattn/go-sqlite3"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 func init() {
@@ -46,17 +46,13 @@ func (bookmark *Bookmark) Validate() error {
 
 // FetchContent downloads the bookmark, reduces the result to a readable plain text format
 func (bookmark *Bookmark) FetchContent() error {
-	l := log.WithFields(log.Fields{
-		"id":    bookmark.ID,
-		"title": bookmark.Title,
-		"url":   bookmark.URL,
-	})
+	logger := log.With().Int64("id", bookmark.ID).Str("title", bookmark.Title).Str("url", bookmark.URL).Logger()
 
-	l.Debug("Fetching bookmark content")
+	logger.Info().Msg("Fetching bookmark content")
 
 	response, err := http.Get(bookmark.URL)
 	if err != nil {
-		l.WithField("status", response.Status).WithError(err).Warn("Error fetching HTML")
+		logger.Warn().Str("status", response.Status).Err(err).Msg("Error fetching content")
 		return err
 	}
 
@@ -66,13 +62,13 @@ func (bookmark *Bookmark) FetchContent() error {
 
 	reader.Stoplist, err = justext.GetStoplist("English")
 	if err != nil {
-		l.WithError(err).Warn("Could not load Stoplist")
+		logger.Warn().Err(err).Msg("Could not load Stoplist")
 		return err
 	}
 
 	paragraphSet, err := reader.ReadAll()
 	if err != nil {
-		l.WithError(err).Warn("Failed reading HTML")
+		logger.Warn().Err(err).Msg("Failed reading HTML")
 		return err
 	}
 
@@ -81,17 +77,17 @@ func (bookmark *Bookmark) FetchContent() error {
 
 	err = writer.WriteAll(paragraphSet)
 	if err != nil {
-		l.WithError(err).Warn("Failed extracting content")
+		logger.Warn().Err(err).Msg("Failed extracting content")
 		return err
 	}
 
 	bookmark.Content, err = html2text.FromReader(&b)
 	if err != nil {
-		l.WithError(err).Warn("Error converting html to text")
+		logger.Warn().Err(err).Msg("Error converting html to text")
 		return err
 	}
 
-	l.Info("Successfully fetched content")
+	logger.Info().Msg("Successfully fetched content")
 
 	return nil
 }
@@ -165,24 +161,20 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 	query.Columns("title", "created", "updated", "url", "content")
 	query.Record(bookmark)
 
-	l := log.WithFields(log.Fields{
-		"id":    bookmark.ID,
-		"title": bookmark.Title,
-		"url":   bookmark.URL,
-	})
+	l := log.With().Int64("id", bookmark.ID).Str("title", bookmark.Title).Str("url", bookmark.URL).Logger()
 
 	if _, err := query.Exec(); err != nil {
 		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
 			// TODO get the existing bookmark from the database to fill the Bookmark.ID field properly
-			l.Info("Bookmark already exists")
+			l.Info().Msg("Bookmark already exists")
 			return nil
 		}
 
-		l.WithError(err).Error("Error persisting bookmark")
+		l.Error().Err(err).Msg("Error persisting bookmark")
 		return err
 	}
 
-	l.Info("Persisted bookmark")
+	l.Info().Msg("Persisted bookmark")
 
 	// TODO move this: WorkQueue <- WorkRequest{Type: "Bookmark.FetchContent", Bookmark: *bookmark}
 

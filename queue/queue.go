@@ -1,13 +1,14 @@
 package queue
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"github.com/nrocco/bookmarks/storage"
+	"github.com/rs/zerolog/log"
 )
 
 // New returns a buffered channel that we can send work requests on.
 func New(store *storage.Store, nworkers int) *Queue {
+	log.Info().Msg("Setting up the queue")
+
 	queue := Queue{
 		work:    make(chan workRequest, 100),
 		workers: make(chan chan workRequest, nworkers),
@@ -19,10 +20,13 @@ func New(store *storage.Store, nworkers int) *Queue {
 			work:    make(chan workRequest),
 			workers: queue.workers,
 		}
+		log.Info().Int("worker", i).Msg("Starting worker")
 		worker.Start()
 	}
 
 	queue.start()
+
+	log.Info().Msg("Queue started")
 
 	return &queue
 }
@@ -47,6 +51,8 @@ func (q *Queue) start() {
 }
 
 func (q *Queue) Schedule(workType string, ID int64) {
+	log.Info().Int64("id", ID).Str("work_type", workType).Msg("Scheduling work")
+
 	q.work <- workRequest{Type: workType, ID: ID}
 }
 
@@ -64,36 +70,33 @@ func (w *worker) Start() {
 
 			select {
 			case work := <-w.work:
-				l := log.WithFields(log.Fields{
-					"type": work.Type,
-					"id":   work.ID,
-				})
+				logger := log.With().Int64("id", work.ID).Str("type", work.Type).Logger()
 
 				if work.Type == "Bookmark.FetchContent" {
 					bookmark := storage.Bookmark{ID: work.ID}
 					if err := w.store.GetBookmark(&bookmark); err != nil {
-						l.WithError(err).Warn("Error loading bookmark")
+						logger.Warn().Err(err).Msg("Error loading bookmark")
 						return
 					}
 
 					if err := bookmark.FetchContent(); err != nil {
-						l.WithError(err).Warn("Error fetching content")
+						logger.Warn().Err(err).Msg("Error fetching content")
 						return
 					}
 
 					if err := w.store.UpdateBookmark(&bookmark); err != nil {
-						l.WithError(err).Warn("Error saving content")
+						logger.Warn().Err(err).Msg("Error saving content")
 						return
 					}
 				} else if work.Type == "Feed.Refresh" {
 					feed := storage.Feed{ID: work.ID}
 					if err := w.store.GetFeed(&feed); err != nil {
-						l.WithError(err).Warn("Error loading feed")
+						logger.Warn().Err(err).Msg("Error loading feed")
 						return
 					}
 
 					if err := w.store.RefreshFeed(&feed); err != nil {
-						l.WithError(err).Warn("Error refreshing feed")
+						logger.Warn().Err(err).Msg("Error refreshing feed")
 						return
 					}
 				} else {

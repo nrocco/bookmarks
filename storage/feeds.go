@@ -7,7 +7,7 @@ import (
 	"github.com/jaytaylor/html2text"
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/mmcdole/gofeed"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
 type Feed struct {
@@ -125,25 +125,20 @@ func (store *Store) AddFeed(feed *Feed) error {
 	query.Columns("created", "updated", "refreshed", "title", "url", "category")
 	query.Record(feed)
 
-	l := logrus.WithFields(logrus.Fields{
-		"id":       feed.ID,
-		"title":    feed.Title,
-		"url":      feed.URL,
-		"category": feed.Category,
-	})
+	logger := log.With().Int64("id", feed.ID).Str("title", feed.Title).Str("url", feed.URL).Str("category", feed.Category).Logger()
 
 	if _, err := query.Exec(); err != nil {
 		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
 			// TODO get the existing feed from the database to fill the Feed.ID field properly
-			l.Info("Feed already exists")
+			logger.Info().Msg("Feed already exists")
 			return nil
 		}
 
-		l.WithError(err).Error("Error persisting feed")
+		logger.Error().Err(err).Msg("Error persisting feed")
 		return err
 	}
 
-	l.Info("Persisted feed")
+	logger.Info().Msg("Persisted feed")
 
 	return nil
 }
@@ -206,11 +201,11 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	}
 
 	fp := gofeed.NewParser()
-	l := logrus.WithField("feed", feed.ID)
+	logger := log.With().Int64("feed", feed.ID).Logger()
 
 	parsedFeed, err := fp.ParseURL(feed.URL)
 	if err != nil {
-		l.WithError(err).Warn("Unable to parse feed")
+		logger.Warn().Err(err).Msg("Unable to parse feed")
 		return err
 	}
 
@@ -222,7 +217,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 			date = item.UpdatedParsed
 		}
 
-		l := l.WithField("title", item.Title)
+		logger := logger.With().Str("title", item.Title).Logger()
 
 		if isFirstItem {
 			feed.LastAuthored = *date
@@ -230,7 +225,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		}
 
 		if date.Before(feed.Refreshed) {
-			l.Debug("Ignoring since we already fetched it before")
+			logger.Info().Msg("Ignoring since we already fetched it before")
 			continue
 		}
 
@@ -241,7 +236,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 
 		content, err = html2text.FromString(content)
 		if err != nil {
-			l.WithError(err).Warn("Error converting html to text")
+			logger.Warn().Err(err).Msg("Error converting html to text")
 			return err
 		}
 
@@ -250,9 +245,9 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		query.Values(feed.ID, time.Now(), time.Now(), item.Title, item.Link, date, content)
 
 		if _, err := query.Exec(); err != nil {
-			l.WithError(err).Warn("Unable to persist feed item")
+			logger.Warn().Err(err).Msg("Unable to persist feed item")
 		} else {
-			l.Info("Persisted feed item")
+			logger.Info().Msg("Persisted feed item")
 		}
 	}
 
@@ -263,7 +258,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return err
 	}
 
-	l.Debug("Feed.refreshed updated")
+	logger.Info().Msg("Feed.refreshed updated")
 
 	return nil
 }

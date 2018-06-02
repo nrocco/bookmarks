@@ -8,13 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nrocco/bookmarks/queue"
-	"github.com/nrocco/bookmarks/storage"
-
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/nrocco/bookmarks/queue"
+	"github.com/nrocco/bookmarks/storage"
+	"github.com/rs/zerolog/log"
 )
 
 //go:generate go-bindata -pkg api -o bindata.go -prefix ../frontend/dist ../frontend/dist/...
@@ -24,12 +22,12 @@ func New(store *storage.Store, queue *queue.Queue) *API {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(5 * time.Second))
 	r.Use(middleware.Heartbeat("/ping"))
 
 	r.Route("/api", func(r chi.Router) {
+		r.Use(loggerMiddleware())
 		r.Use(authenticator(store))
 		r.Mount("/bookmarks", bookmarks{store, queue}.Routes())
 		r.Mount("/feeds", feeds{store, queue}.Routes())
@@ -48,7 +46,7 @@ type API struct {
 
 // ListenAndServe binds the API to the given address and listens for requests
 func (api *API) ListenAndServe(address string) error {
-	log.Infof("Starting webserver at http://%s", address)
+	log.Info().Msgf("Starting webserver at http://%s", address)
 	return http.ListenAndServe(address, api.router)
 }
 
