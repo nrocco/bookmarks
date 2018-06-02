@@ -82,6 +82,7 @@ func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", mimetype)
 	}
 
+	w.Header().Set("Cache-Control", "public, max-age=604800") // 1 week
 	w.WriteHeader(200)
 	w.Write(asset)
 }
