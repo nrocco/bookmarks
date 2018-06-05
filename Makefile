@@ -60,4 +60,4 @@ frontend:
 
 .PHONY: server
 server:
-	fswatch
+	modd

@@ -209,6 +209,8 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return err
 	}
 
+	logger.Info().Msgf("Found %d items in feed", parsedFeed.Items)
+
 	isFirstItem := true
 
 	for _, item := range parsedFeed.Items {
@@ -225,8 +227,8 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		}
 
 		if date.Before(feed.Refreshed) {
-			logger.Info().Msg("Ignoring since we already fetched it before")
-			continue
+			logger.Info().Msg("Found item in the feed we fetched before. Stop importing.")
+			break
 		}
 
 		content := item.Content
@@ -246,19 +248,26 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 
 		if _, err := query.Exec(); err != nil {
 			logger.Warn().Err(err).Msg("Unable to persist feed item")
-		} else {
-			logger.Info().Msg("Persisted feed item")
+			continue
 		}
+
+		logger.Info().Msg("Persisted feed item")
 	}
 
 	feed.Title = parsedFeed.Title
 	feed.Refreshed = time.Now()
 
+	logger.Info().
+		Time("last_authored", feed.LastAuthored).
+		Time("refreshed", feed.Refreshed).
+		Msg("Updating Feed.refreshed")
+
 	if err := store.UpdateFeed(feed); err != nil {
+		logger.Warn().Err(err).Msg("Error updating feed")
 		return err
 	}
 
-	logger.Info().Msg("Feed.refreshed updated")
+	logger.Info().Msg("Feed updated")
 
 	return nil
 }

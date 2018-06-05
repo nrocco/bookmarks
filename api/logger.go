@@ -10,10 +10,10 @@ import (
 )
 
 func loggerMiddleware() func(next http.Handler) http.Handler {
-	logger := log.With().Logger()
-
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
+			logger := log.With().Logger()
+
 			if reqID := middleware.GetReqID(r.Context()); reqID != "" {
 				logger = logger.With().Str("request_id", reqID).Logger()
 			}

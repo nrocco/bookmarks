@@ -23,11 +23,17 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 					Limit:             3,
 				})
 
+				if len(*feeds) == 0 {
+					return
+				}
+
 				log.Info().Msgf("Found %d feeds that need refreshing", len(*feeds))
 
 				for _, feed := range *feeds {
 					queue.Schedule("Feed.Refresh", feed.ID)
 				}
+
+				log.Info().Msg("Done. Now waiting until the next interval")
 			}()
 		}
 	}()

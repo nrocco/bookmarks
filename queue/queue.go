@@ -102,6 +102,8 @@ func (w *worker) Start() {
 				} else {
 					log.Printf("Unknown work received: %s", work.Type)
 				}
+
+				logger.Info().Msg("Work is done")
 			}
 		}
 	}()
