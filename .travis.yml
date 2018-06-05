@@ -15,7 +15,7 @@ install:
 - go get -u github.com/golang/lint/golint
 - dep ensure
 script:
-- make lint vet test
+- make vet test
 before_deploy:
 - docker build --build-arg "VERSION=${TRAVIS_COMMIT:0:6}" -t "nrocco/bookmarks:${TRAVIS_COMMIT:0:6}" .
 deploy:
