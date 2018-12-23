@@ -19,14 +19,14 @@
           <div class="select is-small">
             <select v-model="selectedCategory">
               <option :value="null">All</option>
-              <option :value="category" v-for="category in categories">{{ category }}</option>
+              <option :value="category" v-for="category in categories" :key="category">{{ category }}</option>
             </select>
           </div>
         </div>
       </div>
     </div>
 
-    <a class="panel-block" v-for="feed in filteredFeeds" @click.prevent="onFeedClicked(feed)"><span style="width: 100%;">{{ feed.Title }}</span> <span class="tag is-rounded">{{ feed.Items }}</span></a>
+    <a class="panel-block" :key="feed.id" v-for="feed in filteredFeeds" @click.prevent="onFeedClicked(feed)"><span style="width: 100%;">{{ feed.Title }}</span> <span class="tag is-rounded">{{ feed.Items }}</span></a>
 
     <div class="panel-block">
       <a v-if="!newFeed" class="button is-primary is-outlined is-rounded is-small is-fullwidth" @click.prevent="onAddNewFeedClicked"><i class="fa fa-plus" aria-hidden="true"></i>&nbsp;Add Feed</a>

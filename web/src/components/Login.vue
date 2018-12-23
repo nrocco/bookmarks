@@ -22,7 +22,7 @@
               <input type="submit" class="button is-fullwidth is-dark" value="Login" />
             </form>
           </div>
-          <p><small>sha:{{ version }}</small></p>
+          <p><small>sha:unknown</small></p>
         </div>
       </div>
     </div>
@@ -32,8 +32,6 @@
 <script>
 export default {
   data: () => ({
-    /* global VERSION */
-    version: VERSION
   })
 }
 </script>

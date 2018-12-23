@@ -30,7 +30,7 @@ const actions = {
       payload.archived = 'true'
     }
 
-    client.get(`/bookmarks`, {params: payload}).then(response => {
+    client.get(`/bookmarks`, { params: payload }).then(response => {
       context.commit('bookmarks', response.data)
     })
   },

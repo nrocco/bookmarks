@@ -1,6 +1,6 @@
 <template>
   <div class="block">
-    <div class="pull-right">
+    <div class="buttons is-pulled-right">
       <a class="button is-small is-primary is-outlined" @click.prevent="onRefreshFeedClicked(feed)">Refresh Feed</a>
       <a class="button is-small is-danger is-outlined" @click.prevent="onDeleteFeedClicked(feed)">Delete Feed</a>
     </div>
@@ -12,12 +12,13 @@
     <div v-if="items.length > 0">
       <div class="block feed-item" v-for="item in items" :key="item.ID">
         <p class="has-text-weight-bold">{{ item.Title }}</p>
-        <p class="is-size-7"><a :href="item.URL">{{ item.URL }}</a></p>
+        <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
         <p class="content">{{ item.Content|excerpt }}</p>
-        <p class="block has-text-right">
+        <p class="block buttons is-pulled-right">
           <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
           <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
         </p>
+        <p class="is-clearfix" style="height:2rem;"></p>
       </div>
     </div>
     <div v-else class="block has-text-centered">
@@ -61,6 +62,9 @@ export default {
 .feed-item {
   border-bottom: 1px solid hsl(0, 0%, 96%);
   padding-bottom: 1.5rem;
+}
+.feed-item .url {
+  word-break: break-all;
 }
 .content:not(:last-child) {
   margin-bottom: 0.5rem;

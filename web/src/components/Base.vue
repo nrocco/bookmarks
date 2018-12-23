@@ -41,7 +41,7 @@
     <div class="modal" :class="{'is-active':open}">
       <div class="modal-background"></div>
       <div class="modal-content">
-        <textarea class="textarea">javascript:(function(){window.location = '{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</textarea>
+        <textarea class="textarea" v-model="snippet"></textarea>
       </div>
       <button class="modal-close is-large" aria-label="close" @click.prevent="open=false"></button>
     </div>
@@ -49,34 +49,32 @@
 </template>
 
 <script>
-  export default {
-    computed: {
-      baseurl () {
-        return location.protocol + '//' + location.host
-      },
-      title () {
-        return this.$route.meta.title
-      },
-      subtitle () {
-        return this.$route.meta.subtitle
-      },
-      color () {
-        return this.$route.meta.color
-      }
+export default {
+  computed: {
+    snippet () {
+      return "javascript:(function(){window.location = '" + location.protocol + '//' + location.host + "/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();"
     },
-    data: () => ({
-      open: false,
-      /* global VERSION */
-      version: VERSION
-    }),
-    methods: {
-      onLogoutClicked (event) {
-        this.$http.delete('/token').then(response => {
-          this.$router.push({name: 'login'})
-        })
-      }
+    title () {
+      return this.$route.meta.title
+    },
+    subtitle () {
+      return this.$route.meta.subtitle
+    },
+    color () {
+      return this.$route.meta.color
+    }
+  },
+  data: () => ({
+    open: false
+  }),
+  methods: {
+    onLogoutClicked (event) {
+      this.$http.delete('/token').then(response => {
+        this.$router.push({ name: 'login' })
+      })
     }
   }
+}
 </script>
 
 <style scoped>

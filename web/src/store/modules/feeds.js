@@ -40,7 +40,7 @@ const actions = {
   },
   selectFeed (context, feed) {
     context.commit('selectedFeed', feed)
-    client.get(`/items`, {params: {feed: feed.ID}}).then(response => {
+    client.get(`/items`, { params: { feed: feed.ID } }).then(response => {
       context.commit('items', response.data)
     })
   },
