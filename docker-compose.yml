@@ -1,0 +1,35 @@
+version: "3.7"
+
+services:
+  frontend:
+    build:
+      context: ./
+      target: npmbuilder
+    command: ["npm", "run", "serve"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - type: bind
+        source: ./web/public
+        target: /app/public
+      - type: bind
+        source: ./web/src
+        target: /app/src
+
+  backend:
+    build:
+      context: ./
+      target: gobuilder
+    command: ["modd", "--debug"]
+    ports:
+      - "3000:3000"
+    volumes:
+      - type: bind
+        source: .
+        target: /src
+      - type: volume
+        source: state
+        target: /var/lib/bookmarks
+
+volumes:
+  state:

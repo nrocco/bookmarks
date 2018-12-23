@@ -15,7 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//go:generate go-bindata -pkg api -o bindata.go -prefix ../frontend/dist ../frontend/dist/...
+//go:generate go-bindata -pkg api -o bindata.go -prefix ../web/dist ../web/dist/...
 
 // New returns a new instance of API
 func New(store *storage.Store, queue *queue.Queue) *API {
