@@ -16,7 +16,6 @@ deploy:
   - 'docker image tag nrocco/bookmarks:${TRAVIS_COMMIT:0:6} nrocco/bookmarks:latest'
   - 'docker image push nrocco/bookmarks:${TRAVIS_COMMIT:0:6}'
   - 'docker image push nrocco/bookmarks:latest'
-  - 'wget -O /dev/null --header="Token: ${DEPLOY_TOKEN}" "https://webhooks.casadirocco.nl/hooks/deploy?service=bookmarks&tag=${TRAVIS_COMMIT:0:6}"'
   on:
     branch: master
 env:
