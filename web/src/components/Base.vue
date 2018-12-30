@@ -3,7 +3,10 @@
     <section class="hero is-bold" :class="color">
       <div class="hero-header">
         <div class="container has-text-right logout">
-          <p><a @click.prevent="onLogoutClicked" class="is-size-7"><span class="icon"><i class="fa fa-sign-out" aria-hidden="true"></i></span><span>Logout</span></a></p>
+          <p>
+            <a @click.prevent="open=true" class="is-size-7">Bookmarklet</a>
+            <a @click.prevent="onLogoutClicked" class="is-size-7"><span class="icon"><i class="fa fa-sign-out" aria-hidden="true"></i></span><span>Logout</span></a>
+          </p>
         </div>
       </div>
       <div class="hero-body">
@@ -29,14 +32,6 @@
         <router-view></router-view>
       </div>
     </section>
-    <footer class="footer">
-      <div class="container">
-        <div class="content has-text-centered is-size-7">
-          <p>Made with love by CasaDiRocco</p>
-          <p><a @click.prevent="open=true">bookmarklet</a></p>
-        </div>
-      </div>
-    </footer>
 
     <div class="modal" :class="{'is-active':open}">
       <div class="modal-background"></div>
