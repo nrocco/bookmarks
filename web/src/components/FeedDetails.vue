@@ -1,9 +1,26 @@
 <template>
   <div class="block">
-    <div class="buttons is-pulled-right">
-      <a class="button is-small is-primary is-outlined" @click.prevent="onRefreshFeedClicked(feed)">Refresh Feed</a>
-      <a class="button is-small is-danger is-outlined" @click.prevent="onDeleteFeedClicked(feed)">Delete Feed</a>
+    <div class="dropdown is-right is-pulled-right is-hoverable">
+      <div class="dropdown-trigger">
+        <button class="button" aria-haspopup="true" aria-controls="feed-menu">
+          <span>Info</span>
+          <span class="icon is-small">
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </span>
+        </button>
+      </div>
+      <div class="dropdown-menu" id="feed-menu" role="menu">
+        <div class="dropdown-content">
+          <div class="dropdown-item">
+            <p>Manage this feed.</p>
+          </div>
+          <hr class="dropdown-divider">
+          <a class="dropdown-item is-primary is-outlined" @click.prevent="onRefreshFeedClicked(feed)">Refresh Feed</a>
+          <a class="dropdown-item is-danger is-outlined" @click.prevent="onDeleteFeedClicked(feed)">Delete Feed</a>
+        </div>
+      </div>
     </div>
+
     <h1 class="title">{{ feed.Title }}</h1>
     <h2 class="subtitle">{{ feed.URL }}</h2>
     <p><i :title="feed.LastAuthored|moment('dddd, MMMM Do YYYY, HH:mm')">Last item created {{ feed.LastAuthored|moment("from") }}</i></p>
@@ -14,11 +31,10 @@
         <p class="has-text-weight-bold">{{ item.Title }}</p>
         <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
         <p class="content">{{ item.Content|excerpt }}</p>
-        <p class="block buttons is-pulled-right">
+        <p class="buttons is-right">
           <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
           <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
         </p>
-        <p class="is-clearfix" style="height:2rem;"></p>
       </div>
     </div>
     <div v-else class="block has-text-centered">
@@ -31,6 +47,9 @@
 import { mapActions } from 'vuex'
 
 export default {
+  data () {
+    return {}
+  },
   computed: {
     feed () {
       return this.$store.getters.selectedFeed

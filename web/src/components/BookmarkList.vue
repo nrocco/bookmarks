@@ -7,12 +7,11 @@
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
       <p class="is-size-7"><a class="url" :href="bookmark.URL">{{ bookmark.URL }}</a></p>
       <p class="content">{{ bookmark.Content|excerpt }}</p>
-      <p class="block buttons is-pulled-right">
+      <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(bookmark)" class="button is-small is-danger is-outlined">Remove</a>
         <a @click.prevent="onReadItLaterClicked(bookmark)" class="button is-small is-primary" v-if="bookmark.Archived">Read it later</a>
         <a @click.prevent="onArchiveClicked(bookmark)" class="button is-small is-dark" v-else>Archive</a>
       </p>
-      <p class="is-clearfix" style="height:2rem;"></p>
     </div>
   </div>
 </template>
