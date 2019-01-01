@@ -21,19 +21,17 @@ var rootCmd = &cobra.Command{
 	Short:        "Personal zero-touch bookmarking app in the cloud, with full text search support.",
 	SilenceUsage: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		var err error
-		// Setup the global logger
 		if viper.GetBool("debug") {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		} else {
 			zerolog.SetGlobalLevel(zerolog.InfoLevel)
 		}
 
-		return err
+		return nil
 	},
 }
 
-// Execute executes the rootCmd logic and is the main entry point for bookmarks
+// Execute executes the rootCmd logic and is the main entry point
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -47,7 +45,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .bookmarks.yaml in $PWD, $HOME, /etc)")
 
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug mode")
-	rootCmd.PersistentFlags().StringP("storage", "s", "", "The location where to store bookmarks state")
+	rootCmd.PersistentFlags().StringP("storage", "s", "", "The location where to store state")
 
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("storage", rootCmd.PersistentFlags().Lookup("storage"))

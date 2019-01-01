@@ -18,7 +18,7 @@ import (
 //go:generate go-bindata -pkg api -o bindata.go -prefix ../web/dist ../web/dist/...
 
 // New returns a new instance of API
-func New(store *storage.Store, queue *queue.Queue) *API {
+func New(store *storage.Store, queue *queue.Queue, auth bool) *API {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -28,7 +28,9 @@ func New(store *storage.Store, queue *queue.Queue) *API {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(loggerMiddleware())
-		r.Use(authenticator(store))
+		if auth {
+			r.Use(authenticator(store))
+		}
 		r.Mount("/bookmarks", bookmarks{store, queue}.Routes())
 		r.Mount("/feeds", feeds{store, queue}.Routes())
 		r.Mount("/items", items{store, queue}.Routes())

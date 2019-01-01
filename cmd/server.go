@@ -29,10 +29,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		// Setup the async job queue
-		queue := queue.New(store, viper.GetInt("workers")) // TODO conditionally disable queue if workers = 0
+		queue := queue.New(store, viper.GetInt("workers"))
 
 		// Setup the http server
-		api := api.New(store, queue)
+		api := api.New(store, queue, !viper.GetBool("noauth"))
 
 		if viper.GetInt("interval") != 0 {
 			// Setup the periodic scheduler
@@ -53,13 +53,15 @@ var serverCmd = &cobra.Command{
 }
 
 func init() {
-	serverCmd.PersistentFlags().IntP("workers", "w", 4, "The number of workers to start (0 to disable)")
+	serverCmd.PersistentFlags().IntP("workers", "w", 4, "The number of workers to start")
 	serverCmd.PersistentFlags().StringP("listen", "l", "0.0.0.0:3000", "Address to listen for HTTP requests on")
 	serverCmd.PersistentFlags().IntP("interval", "i", 30, "Fetch new feeds with this interval in minutes (0 to disable)")
+	serverCmd.PersistentFlags().BoolP("noauth", "n", false, "Disable authentication")
 
 	viper.BindPFlag("workers", serverCmd.PersistentFlags().Lookup("workers"))
 	viper.BindPFlag("listen", serverCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("interval", serverCmd.PersistentFlags().Lookup("interval"))
+	viper.BindPFlag("noauth", serverCmd.PersistentFlags().Lookup("noauth"))
 
 	rootCmd.AddCommand(serverCmd)
 }
