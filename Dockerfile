@@ -1,4 +1,4 @@
-FROM node:latest AS npmbuilder
+FROM node:alpine AS npmbuilder
 RUN mkdir -p /app
 WORKDIR /app
 COPY web/package*.json /app/
@@ -6,7 +6,7 @@ RUN npm install --no-progress
 COPY web/ /app/
 RUN npm run lint --no-progress
 RUN npm run build --production --no-progress
-
+###############################################################################
 FROM golang:alpine AS gobuilder
 RUN apk add --no-cache \
         ca-certificates \
@@ -24,10 +24,14 @@ COPY --from=npmbuilder /app/dist/ ./web/dist/
 RUN go generate -v api/api.go && \
     go generate -v storage/bookmarks.go
 ARG VERSION=unknown
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
 RUN go build -v -o bookmarks \
-        -ldflags "-X main.Version=${VERSION}" \
-        cmd/bookmarks/bookmarks.go
-
+        -ldflags "\
+            -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
+            -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
+            -X github.com/nrocco/bookmarks/cmd.buildDate=${BUILD_DATE}"
+###############################################################################
 FROM alpine:edge
 RUN apk add --no-cache \
         ca-certificates \

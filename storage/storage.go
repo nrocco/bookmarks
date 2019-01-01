@@ -1,21 +1,32 @@
 package storage
 
 import (
+	"path/filepath"
+
 	"github.com/nrocco/qb"
 
 	// Store uses sqlite3 for its database
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func New(file string) (*Store, error) {
+const (
+	databaseFile = "data.sqlite"
+)
+
+func New(path string) (*Store, error) {
 	var err error
 
-	db, err := qb.Open(file)
+	path, err = filepath.Abs(path)
 	if err != nil {
 		return &Store{}, err
 	}
 
-	store := Store{db}
+	db, err := qb.Open(filepath.Join(path, databaseFile))
+	if err != nil {
+		return &Store{}, err
+	}
+
+	store := Store{db, path}
 
 	if err := store.migrate(); err != nil {
 		return &Store{}, err
@@ -26,4 +37,5 @@ func New(file string) (*Store, error) {
 
 type Store struct {
 	db *qb.DB
+	fs string
 }

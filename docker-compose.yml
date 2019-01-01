@@ -1,5 +1,5 @@
+---
 version: "3.7"
-
 services:
   frontend:
     build:
@@ -9,13 +9,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - type: bind
-        source: ./web/public
-        target: /app/public
-      - type: bind
-        source: ./web/src
-        target: /app/src
-
+      - "./web/public:/app/public"
+      - "./web/src:/app/src"
+      - "./web/package.json:/app/package.json"
+      - "./web/package-lock.json:/app/package-lock.json"
+      - "./web/vue.config.js:/app/vue.config.js"
   backend:
     build:
       context: ./
@@ -24,12 +22,5 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - type: bind
-        source: .
-        target: /src
-      - type: volume
-        source: state
-        target: /var/lib/bookmarks
-
-volumes:
-  state:
+      - "./:/src"
+      - "/var/lib/bookmarks"

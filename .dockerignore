@@ -1,9 +1,13 @@
+/Dockerfile
+/LICENSE
+/README.md
 /api/bindata.go
 /build
 /coverage
-/data.sqlite
+/docker-compose.yml
+/modd.conf
+/storage/stopwords.go
 /vendor
 /web/dist
 /web/node_modules
 /web/npm-debug.log
-/storage/stopwords.go
