@@ -16,11 +16,11 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 		ticker := time.NewTicker(time.Minute * time.Duration(interval))
 		for _ = range ticker.C {
 			go func() {
-				log.Info().Msg("Check feeds that haven't been refreshed for 6 hours")
+				log.Info().Msg("Check feeds that haven't been refreshed for 4 hours")
 
 				feeds, _ := store.ListFeeds(&storage.ListFeedsOptions{
-					NotRefreshedSince: time.Now().Add(-6 * time.Hour),
-					Limit:             3,
+					NotRefreshedSince: time.Now().Add(-4 * time.Hour),
+					Limit:             8,
 				})
 
 				if len(*feeds) == 0 {
