@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/JalfResi/justext"
@@ -27,6 +29,7 @@ type Bookmark struct {
 	Updated  time.Time
 	Title    string
 	URL      string
+	Tags     []string
 	Content  string
 	Archived bool
 }
@@ -121,6 +124,8 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Offset(options.Offset)
 	query.Load(&bookmarks)
 
+	store.fetchBookmarksTags(bookmarks)
+
 	return &bookmarks, totalCount
 }
 
@@ -140,6 +145,8 @@ func (store *Store) GetBookmark(bookmark *Bookmark) error {
 	if err := query.LoadValue(&bookmark); err != nil {
 		return err
 	}
+
+	store.fetchBookmarksTags([]*Bookmark{bookmark})
 
 	return nil
 }
@@ -205,6 +212,24 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 		return err
 	}
 
+	for _, tag := range bookmark.Tags {
+		query := store.db.Insert("bookmarks_tags")
+		query.Columns("bookmark_id", "name")
+		query.Values(bookmark.ID, tag)
+
+		if _, err := query.Exec(); err != nil {
+			return err
+		}
+	}
+
+	deleteTagsQuery := store.db.Delete("bookmarks_tags")
+	deleteTagsQuery.Where("bookmark_id = ?", bookmark.ID)
+	deleteTagsQuery.Where("name NOT IN ('"+strings.Join(bookmark.Tags, "','")+"')", nil)
+
+	if _, err := deleteTagsQuery.Exec(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -219,6 +244,34 @@ func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
 
 	if _, err := query.Exec(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (store *Store) fetchBookmarksTags(bookmarks []*Bookmark) error {
+	bookmarksMap := map[int64]*Bookmark{}
+	bookmarkIds := []string{}
+
+	for _, bookmark := range bookmarks {
+		bookmark.Tags = []string{}
+		bookmarksMap[bookmark.ID] = bookmark
+		bookmarkIds = append(bookmarkIds, strconv.FormatInt(bookmark.ID, 10))
+	}
+
+	query := store.db.Select("bookmarks_tags")
+	query.Columns("bookmark_id", "name")
+	query.Where("bookmark_id IN ("+strings.Join(bookmarkIds, ",")+")", nil)
+	query.OrderBy("name", "ASC")
+
+	var bookmarkTags []struct {
+		BookmarkID int64
+		Name       string
+	}
+	query.Load(&bookmarkTags)
+
+	for _, bookmarkTag := range bookmarkTags {
+		bookmarksMap[bookmarkTag.BookmarkID].Tags = append(bookmarksMap[bookmarkTag.BookmarkID].Tags, bookmarkTag.Name)
 	}
 
 	return nil

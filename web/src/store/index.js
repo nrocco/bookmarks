@@ -27,6 +27,7 @@ export default new Vuex.Store({
     },
     feeds (context, route) {
       context.dispatch('getFeeds')
+      context.dispatch('getItems')
     }
   }
 })

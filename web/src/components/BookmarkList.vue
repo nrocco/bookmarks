@@ -3,9 +3,15 @@
     <div class="block control">
       <input class="input" type="search" placeholder="Search" v-model="filter" autofocus @search="onSearch">
     </div>
+
+    <hr/>
+
     <div class="block bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
       <p class="is-size-7"><a class="url" :href="bookmark.URL">{{ bookmark.URL }}</a></p>
+      <div class="tags" v-if="bookmark.Tags">
+        <span class="tag" v-for="tag in bookmark.Tags" :key="tag">{{ tag }} <button class="delete is-small"></button></span>
+      </div>
       <p class="content">{{ bookmark.Content|excerpt }}</p>
       <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(bookmark)" class="button is-small is-danger is-outlined">Remove</a>
@@ -67,5 +73,9 @@ export default {
 }
 .content:not(:last-child) {
   margin-bottom: 0.5rem;
+}
+.bookmark .tags:not(:last-child) {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
 }
 </style>

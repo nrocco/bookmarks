@@ -28,6 +28,7 @@ func (api feeds) Routes() chi.Router {
 	r.Post("/", api.create)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Use(api.middleware)
+		r.Patch("/", api.update)
 		r.Delete("/", api.delete)
 		r.Post("/refresh", api.refresh)
 	})
@@ -37,10 +38,9 @@ func (api feeds) Routes() chi.Router {
 
 func (api *feeds) list(w http.ResponseWriter, r *http.Request) {
 	feeds, totalCount := api.store.ListFeeds(&storage.ListFeedsOptions{
-		Search:   r.URL.Query().Get("q"),
-		Category: r.URL.Query().Get("category"),
-		Limit:    50, // TODO allow client to set this
-		Offset:   0,  // TODO allow client to set this
+		Search: r.URL.Query().Get("q"),
+		Limit:  50, // TODO allow client to set this
+		Offset: 0,  // TODO allow client to set this
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
@@ -95,6 +95,25 @@ func (api *feeds) refresh(w http.ResponseWriter, r *http.Request) {
 	api.queue.Schedule("Feed.Refresh", feed.ID)
 
 	jsonResponse(w, 204, nil)
+}
+
+func (api *feeds) update(w http.ResponseWriter, r *http.Request) {
+	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
+
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	if err := decoder.Decode(feed); err != nil {
+		jsonError(w, err, 400)
+		return
+	}
+
+	if err := api.store.UpdateFeed(feed); err != nil {
+		jsonError(w, err, 500)
+		return
+	}
+
+	jsonResponse(w, 200, feed)
 }
 
 func (api *feeds) delete(w http.ResponseWriter, r *http.Request) {

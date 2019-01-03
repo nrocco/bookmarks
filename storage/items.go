@@ -35,6 +35,7 @@ func (item *FeedItem) Validate() error {
 
 // ToBookmark converts the feed item to a bookmark
 func (item *FeedItem) ToBookmark() *Bookmark {
+	// TODO also copy Feed.Tags to Bookmark.Tags
 	return &Bookmark{
 		Title:   item.Title,
 		URL:     item.URL,
@@ -43,11 +44,10 @@ func (item *FeedItem) ToBookmark() *Bookmark {
 }
 
 type ListFeedItemsOptions struct {
-	Search   string
-	Category string
-	FeedID   string
-	Limit    int
-	Offset   int
+	Search string
+	FeedID string
+	Limit  int
+	Offset int
 }
 
 // ListFeedItems fetches multiple feeds from the database
@@ -56,11 +56,6 @@ func (store *Store) ListFeedItems(options *ListFeedItemsOptions) (*[]*FeedItem, 
 
 	if options.Search != "" {
 		query.Where("(i.title LIKE ? OR i.url LIKE ? OR i.content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
-	}
-
-	if options.Category != "" {
-		query.Join("LEFT JOIN feeds f ON i.feed_id = f.id")
-		query.Where("f.category = ?", options.Category)
 	}
 
 	if options.FeedID != "" {

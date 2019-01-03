@@ -2,6 +2,8 @@ package storage
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jaytaylor/html2text"
@@ -17,12 +19,12 @@ type Feed struct {
 	Refreshed    time.Time
 	LastAuthored time.Time
 	Title        string
-	Category     string
 	URL          string
+	Tags         []string
 	Items        int
 }
 
-// Validate is used to assert Title, URL and Category are set
+// Validate is used to assert Title and URL are set
 func (feed *Feed) Validate() error {
 	if feed.Title == "" {
 		return errors.New("Missing Feed.Title")
@@ -32,16 +34,11 @@ func (feed *Feed) Validate() error {
 		return errors.New("Missing Feed.URL")
 	}
 
-	if feed.Category == "" {
-		return errors.New("Missing Feed.Category")
-	}
-
 	return nil
 }
 
 type ListFeedsOptions struct {
 	Search            string
-	Category          string
 	NotRefreshedSince time.Time
 	Limit             int
 	Offset            int
@@ -53,10 +50,6 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 
 	if options.Search != "" {
 		query.Where("(f.title LIKE ? OR f.url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
-	}
-
-	if options.Category != "" {
-		query.Where("f.category = ?", options.Category)
 	}
 
 	if !options.NotRefreshedSince.IsZero() {
@@ -79,6 +72,8 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&feeds)
+
+	store.fetchFeedsTags(feeds)
 
 	return &feeds, totalCount
 }
@@ -122,10 +117,10 @@ func (store *Store) AddFeed(feed *Feed) error {
 	feed.Refreshed = time.Time{}
 
 	query := store.db.Insert("feeds")
-	query.Columns("created", "updated", "refreshed", "title", "url", "category")
+	query.Columns("created", "updated", "refreshed", "title", "url")
 	query.Record(feed)
 
-	logger := log.With().Int64("id", feed.ID).Str("title", feed.Title).Str("url", feed.URL).Str("category", feed.Category).Logger()
+	logger := log.With().Int64("id", feed.ID).Str("title", feed.Title).Str("url", feed.URL).Logger()
 
 	if _, err := query.Exec(); err != nil {
 		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
@@ -161,10 +156,27 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query.Set("last_authored", feed.LastAuthored)
 	query.Set("title", feed.Title)
 	query.Set("url", feed.URL)
-	query.Set("category", feed.Category)
 	query.Where("id = ?", feed.ID)
 
 	if _, err := query.Exec(); err != nil {
+		return err
+	}
+
+	for _, tag := range feed.Tags {
+		query := store.db.Insert("feeds_tags")
+		query.Columns("feed_id", "name")
+		query.Values(feed.ID, tag)
+
+		if _, err := query.Exec(); err != nil {
+			return err
+		}
+	}
+
+	deleteTagsQuery := store.db.Delete("feeds_tags")
+	deleteTagsQuery.Where("feed_id = ?", feed.ID)
+	deleteTagsQuery.Where("name NOT IN ('"+strings.Join(feed.Tags, "','")+"')", nil)
+
+	if _, err := deleteTagsQuery.Exec(); err != nil {
 		return err
 	}
 
@@ -268,6 +280,34 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	}
 
 	logger.Info().Msg("Feed updated")
+
+	return nil
+}
+
+func (store *Store) fetchFeedsTags(feeds []*Feed) error {
+	feedsMap := map[int64]*Feed{}
+	feedIds := []string{}
+
+	for _, feed := range feeds {
+		feed.Tags = []string{}
+		feedsMap[feed.ID] = feed
+		feedIds = append(feedIds, strconv.FormatInt(feed.ID, 10))
+	}
+
+	query := store.db.Select("feeds_tags")
+	query.Columns("feed_id", "name")
+	query.Where("feed_id IN ("+strings.Join(feedIds, ",")+")", nil)
+	query.OrderBy("name", "ASC")
+
+	var feedTags []struct {
+		FeedID int64
+		Name   string
+	}
+	query.Load(&feedTags)
+
+	for _, feedTag := range feedTags {
+		feedsMap[feedTag.FeedID].Tags = append(feedsMap[feedTag.FeedID].Tags, feedTag.Name)
+	}
 
 	return nil
 }

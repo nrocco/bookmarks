@@ -13,13 +13,6 @@ const getters = {
   items: state => {
     return state.items
   },
-  categories: state => {
-    let categories = []
-    for (let feed of state.feeds) {
-      categories.push(feed.Category)
-    }
-    return [...new Set(categories)]
-  },
   selectedFeed: state => {
     return state.selectedFeed
   }
@@ -29,6 +22,11 @@ const actions = {
   getFeeds (context) {
     client.get(`/feeds`).then(response => {
       context.commit('feeds', response.data)
+    })
+  },
+  getItems (context) {
+    client.get(`/items`).then(response => {
+      context.commit('items', response.data)
     })
   },
   addFeed (context, feed) {

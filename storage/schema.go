@@ -3,6 +3,20 @@ package storage
 const schema = `
 BEGIN;
 
+CREATE TABLE IF NOT EXISTS bookmarks_tags (
+	bookmark_id INTEGER NOT NULL,
+	name VARCHAR(64) NOT NULL,
+	FOREIGN KEY(bookmark_id) REFERENCES bookmarks(id),
+	UNIQUE(bookmark_id, name) ON CONFLICT IGNORE
+);
+
+CREATE TABLE IF NOT EXISTS feeds_tags (
+	feed_id INTEGER NOT NULL,
+	name VARCHAR(64) NOT NULL,
+	FOREIGN KEY(feed_id) REFERENCES feeds(id),
+	UNIQUE(feed_id, name) ON CONFLICT IGNORE
+);
+
 CREATE TABLE IF NOT EXISTS bookmarks (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	created DATE DEFAULT (datetime('now')),
@@ -35,12 +49,19 @@ CREATE TABLE IF NOT EXISTS items (
 	content TEXT NOT NULL,
 	FOREIGN KEY(feed_id) REFERENCES feeds(id)
 );
+
 CREATE TABLE IF NOT EXISTS users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	username VARCHAR(64) NOT NULL,
 	password VARCHAR(255) NOT NULL,
 	token VARCHAR(255) NOT NULL
 );
+
+CREATE VIEW IF NOT EXISTS tags AS
+	SELECT name FROM bookmarks_tags
+	UNION
+	SELECT name FROM feeds_tags
+;
 
 COMMIT;
 `

@@ -29,9 +29,9 @@ func (api bookmarks) Routes() chi.Router {
 	r.Get("/save", api.save)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Use(api.middleware)
+		r.Get("/", api.get)
+		r.Patch("/", api.update)
 		r.Delete("/", api.delete)
-		r.Post("/archive", api.archive)
-		r.Post("/readitlater", api.readitlater)
 	})
 
 	return r
@@ -107,28 +107,29 @@ func (api *bookmarks) middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *bookmarks) archive(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) get(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
-	bookmark.Archived = true
 
-	if err := api.store.UpdateBookmark(bookmark); err != nil {
-		jsonError(w, err, 500)
-		return
-	}
-
-	jsonResponse(w, 204, nil)
+	jsonResponse(w, 200, bookmark)
 }
 
-func (api *bookmarks) readitlater(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) update(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
-	bookmark.Archived = false
+
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+
+	if err := decoder.Decode(bookmark); err != nil {
+		jsonError(w, err, 400)
+		return
+	}
 
 	if err := api.store.UpdateBookmark(bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
 
-	jsonResponse(w, 204, nil)
+	jsonResponse(w, 200, bookmark)
 }
 
 func (api *bookmarks) delete(w http.ResponseWriter, r *http.Request) {
