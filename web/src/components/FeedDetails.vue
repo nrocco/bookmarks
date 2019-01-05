@@ -43,7 +43,7 @@ export default {
   methods: {
     ...mapActions({
       onRefreshFeedClicked: 'refreshFeed',
-      onDeleteFeedClicked: 'deleteFeed',
+      onDeleteFeedClicked: 'deleteFeed'
     })
   }
 }

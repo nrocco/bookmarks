@@ -42,7 +42,7 @@ export default {
   },
   data () {
     return {
-      selectedFeedId: ""
+      selectedFeedId: ''
     }
   },
   computed: {
@@ -51,12 +51,12 @@ export default {
     },
     selectedFeed () {
       return this.$store.getters.feeds.filter(feed => {
-        return feed.ID == this.selectedFeedId
+        return feed.ID === this.selectedFeedId
       }).shift()
     },
     items () {
       return this.$store.getters.items.filter(item => {
-        return this.selectedFeedId === "" || (item.FeedID == this.selectedFeedId)
+        return this.selectedFeedId === '' || (item.FeedID === this.selectedFeedId)
       })
     },
     totalUnread () {
