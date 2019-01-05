@@ -221,7 +221,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return err
 	}
 
-	logger.Info().Int("items", parsedFeed.Items).Msg("Found items in Feed")
+	logger.Info().Int("items", len(parsedFeed.Items)).Msg("Found items in Feed")
 
 	isFirstItem := true
 

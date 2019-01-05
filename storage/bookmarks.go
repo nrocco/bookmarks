@@ -95,6 +95,7 @@ func (bookmark *Bookmark) FetchContent() error {
 	return nil
 }
 
+// ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
 	Search   string
 	Archived bool

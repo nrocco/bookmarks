@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	version   string = "devel"
-	commit    string = "unknown"
-	buildDate string = "unknown"
+	version   = "devel"
+	commit    = "unknown"
+	buildDate = "unknown"
 	cfgFile   string
 )
 

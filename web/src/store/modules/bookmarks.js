@@ -35,12 +35,12 @@ const actions = {
     })
   },
   readLaterBookmark (context, bookmark) {
-    client.patch(`/bookmarks/${bookmark.ID}`, {Archived: false}).then(response => {
+    client.patch(`/bookmarks/${bookmark.ID}`, { Archived: false }).then(response => {
       context.commit('removeBookmark', bookmark)
     })
   },
   archiveBookmark (context, bookmark) {
-    client.patch(`/bookmarks/${bookmark.ID}`, {Archived: true}).then(response => {
+    client.patch(`/bookmarks/${bookmark.ID}`, { Archived: true }).then(response => {
       context.commit('removeBookmark', bookmark)
     })
   },

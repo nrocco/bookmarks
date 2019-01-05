@@ -16,7 +16,7 @@ func New(store *storage.Store, nworkers int) *Queue {
 
 	for i := 0; i < nworkers; i++ {
 		worker := worker{
-			id:      i,
+			ID:      i,
 			store:   store,
 			work:    make(chan workRequest),
 			workers: queue.workers,
@@ -32,6 +32,7 @@ func New(store *storage.Store, nworkers int) *Queue {
 	return &queue
 }
 
+// Queue is an object which accepts new work and manages work and workers
 type Queue struct {
 	work    chan workRequest
 	workers chan chan workRequest
@@ -42,10 +43,10 @@ func (q *Queue) start() {
 		for {
 			select {
 			case work := <-q.work:
-				log.Info().Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Got new work")
+				log.Info().Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Got new work from the queue")
 				go func() {
 					worker := <-q.workers
-					log.Info().Int("worker_id", worker.id).Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Got new work")
+					log.Info().Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Moving work to a worker queue")
 					worker <- work
 				}()
 			}
@@ -53,6 +54,7 @@ func (q *Queue) start() {
 	}()
 }
 
+// Schedule allows you to add new work to the Queue
 func (q *Queue) Schedule(workType string, ID int64) {
 	log.Info().Int64("work_id", ID).Str("work_type", workType).Msg("Scheduling work")
 
@@ -60,7 +62,7 @@ func (q *Queue) Schedule(workType string, ID int64) {
 }
 
 type worker struct {
-	id      int
+	ID      int
 	store   *storage.Store
 	work    chan workRequest
 	workers chan chan workRequest
@@ -74,7 +76,7 @@ func (w *worker) Start() {
 
 			select {
 			case work := <-w.work:
-				logger := log.With().Int("worker_id", w.id).Int64("work_id", work.ID).Str("work_type", work.Type).Logger()
+				logger := log.With().Int("worker_id", w.ID).Int64("work_id", work.ID).Str("work_type", work.Type).Logger()
 
 				if work.Type == "Bookmark.FetchContent" {
 					bookmark := storage.Bookmark{ID: work.ID}
@@ -95,7 +97,7 @@ func (w *worker) Start() {
 						return
 					}
 
-					logger.Info("Content for bookmark fetched")
+					logger.Info().Msg("Content for bookmark fetched")
 				} else if work.Type == "Feed.Refresh" {
 					feed := storage.Feed{ID: work.ID}
 					if err := w.store.GetFeed(&feed); err != nil {
@@ -110,7 +112,7 @@ func (w *worker) Start() {
 						return
 					}
 
-					logger.Info("Feed refreshed")
+					logger.Info().Msg("Feed refreshed")
 				} else {
 					logger.Warn().Msg("Unknown work received")
 				}

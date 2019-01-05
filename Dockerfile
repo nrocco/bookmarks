@@ -15,10 +15,12 @@ RUN apk add --no-cache \
         musl-dev \
         sqlite \
     && go get -u github.com/jteeuwen/go-bindata/... \
-    && go get github.com/cortesi/modd/cmd/modd
+    && go get -u github.com/cortesi/modd/cmd/modd \
+    && go get -u golang.org/x/lint/golint
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
+RUN golint ./...
 COPY . ./
 COPY --from=npmbuilder /app/dist/ ./web/dist/
 RUN go generate -v api/api.go && \
