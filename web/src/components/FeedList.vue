@@ -1,27 +1,29 @@
 <template>
   <div>
     <div class="block">
-      <div class="field has-addons has-addons-right">
-        <p class="control">
-          <span class="select">
-            <select>
+      <div class="field">
+        <div class="control">
+          <div class="select">
+            <select v-model="selectedFeedId">
               <option value="">All ({{ totalUnread }})</option>
               <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }} ({{ feed.Items }})</option>
             </select>
-          </span>
-        </p>
-        <p class="control is-expanded">
-          <input class="input" type="search" placeholder="Search" autofocus>
-        </p>
+          </div>
+        </div>
       </div>
     </div>
+
+    <feed-details v-if="selectedFeedId" :feed="selectedFeed" />
 
     <hr/>
 
     <div class="block feed-item" v-for="item in items" :key="item.ID">
       <p class="has-text-weight-bold">{{ item.Title }}</p>
       <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
-      <p class="content">{{ item.Content|excerpt }}</p>
+      <div class="tags" v-if="getFeedForItem(item).Tags">
+        <span class="tag" v-for="tag in getFeedForItem(item).Tags" :key="tag">{{ tag }}</span>
+      </div>
+      <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content|excerpt }}</p>
       <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
         <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
@@ -32,17 +34,30 @@
 
 <script>
 import { mapActions } from 'vuex'
+import FeedDetails from './FeedDetails'
 
 export default {
+  components: {
+    FeedDetails
+  },
   data () {
-    return {}
+    return {
+      selectedFeedId: ""
+    }
   },
   computed: {
     feeds () {
       return this.$store.getters.feeds
     },
+    selectedFeed () {
+      return this.$store.getters.feeds.filter(feed => {
+        return feed.ID == this.selectedFeedId
+      }).shift()
+    },
     items () {
-      return this.$store.getters.items
+      return this.$store.getters.items.filter(item => {
+        return this.selectedFeedId === "" || (item.FeedID == this.selectedFeedId)
+      })
     },
     totalUnread () {
       return this.$store.getters.items.length
@@ -57,6 +72,11 @@ export default {
     }
   },
   methods: {
+    getFeedForItem (item) {
+      return this.$store.getters.feeds.filter(feed => {
+        return item.FeedID === feed.ID
+      })[0]
+    },
     ...mapActions({
       onRefreshFeedClicked: 'refreshFeed',
       onDeleteFeedClicked: 'deleteFeed',
@@ -77,5 +97,15 @@ export default {
 }
 .content:not(:last-child) {
   margin-bottom: 0.5rem;
+}
+.select {
+  width: 100%;
+}
+.select select {
+  width: 100%;
+}
+.feed-item .tags:not(:last-child) {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
 }
 </style>
