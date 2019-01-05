@@ -213,7 +213,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	}
 
 	fp := gofeed.NewParser()
-	logger := log.With().Int64("feed", feed.ID).Logger()
+	logger := log.With().Int64("feed", feed.ID).Str("url", feed.URL).Logger()
 
 	parsedFeed, err := fp.ParseURL(feed.URL)
 	if err != nil {
@@ -221,7 +221,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return err
 	}
 
-	logger.Info().Msgf("Found %d items in feed", parsedFeed.Items)
+	logger.Info().Int("items", parsedFeed.Items).Msg("Found items in Feed")
 
 	isFirstItem := true
 

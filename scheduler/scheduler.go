@@ -10,30 +10,39 @@ import (
 
 // New starts a new scheduler that refreshes rrs/atom feeds
 func New(store *storage.Store, queue *queue.Queue, interval int) {
-	log.Info().Msg("Starting the scheduler")
+	log.Info().Int64("interval", interval).Msg("Starting the scheduler")
 
 	go func() {
 		ticker := time.NewTicker(time.Minute * time.Duration(interval))
 		for _ = range ticker.C {
 			go func() {
-				log.Info().Msg("Check feeds that haven't been refreshed for 4 hours")
+				notRefreshedSince := time.Now().Add(-4 * time.Hour)
+				limit := 8
+
+				log.Info().
+					Int64("limit", limit).
+					Time("not_refreshed_since", notRefreshedSince).
+					Msg("Checking for unfresh feeds")
 
 				feeds, _ := store.ListFeeds(&storage.ListFeedsOptions{
-					NotRefreshedSince: time.Now().Add(-4 * time.Hour),
-					Limit:             8,
+					NotRefreshedSince: notRefreshedSince,
+					Limit:             limit,
 				})
 
 				if len(*feeds) == 0 {
+					log.Info().Msg("No unfresh feeds found")
+
 					return
 				}
 
-				log.Info().Msgf("Found %d feeds that need refreshing", len(*feeds))
+				log.Info().Int64("feeds", len(*feeds)).Msg("Unfresh feeds found")
 
 				for _, feed := range *feeds {
+					log.Info().Int64("feed_id", feed.ID).Str("feed_title", feed.Title).Msg("Scheduling a refresh")
 					queue.Schedule("Feed.Refresh", feed.ID)
 				}
 
-				log.Info().Msg("Done. Now waiting until the next interval")
+				log.Info().Msg("Done checking unfresh feeds")
 			}()
 		}
 	}()

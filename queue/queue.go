@@ -7,7 +7,7 @@ import (
 
 // New returns a buffered channel that we can send work requests on.
 func New(store *storage.Store, nworkers int) *Queue {
-	log.Info().Msg("Setting up the queue")
+	log.Info().Int("workers", nworkers).Msg("Setting up the queue")
 
 	queue := Queue{
 		work:    make(chan workRequest, 100),
@@ -16,6 +16,7 @@ func New(store *storage.Store, nworkers int) *Queue {
 
 	for i := 0; i < nworkers; i++ {
 		worker := worker{
+			id:      i,
 			store:   store,
 			work:    make(chan workRequest),
 			workers: queue.workers,
@@ -41,8 +42,10 @@ func (q *Queue) start() {
 		for {
 			select {
 			case work := <-q.work:
+				log.Info().Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Got new work")
 				go func() {
 					worker := <-q.workers
+					log.Info().Int("worker_id", worker.id).Int64("work_id", work.ID).Str("work_type", work.Type).Msg("Got new work")
 					worker <- work
 				}()
 			}
@@ -51,12 +54,13 @@ func (q *Queue) start() {
 }
 
 func (q *Queue) Schedule(workType string, ID int64) {
-	log.Info().Int64("id", ID).Str("work_type", workType).Msg("Scheduling work")
+	log.Info().Int64("work_id", ID).Str("work_type", workType).Msg("Scheduling work")
 
 	q.work <- workRequest{Type: workType, ID: ID}
 }
 
 type worker struct {
+	id      int
 	store   *storage.Store
 	work    chan workRequest
 	workers chan chan workRequest
@@ -70,7 +74,7 @@ func (w *worker) Start() {
 
 			select {
 			case work := <-w.work:
-				logger := log.With().Int64("id", work.ID).Str("type", work.Type).Logger()
+				logger := log.With().Int("worker_id", w.id).Int64("work_id", work.ID).Str("work_type", work.Type).Logger()
 
 				if work.Type == "Bookmark.FetchContent" {
 					bookmark := storage.Bookmark{ID: work.ID}
@@ -78,6 +82,8 @@ func (w *worker) Start() {
 						logger.Warn().Err(err).Msg("Error loading bookmark")
 						return
 					}
+
+					logger := logger.With().Str("bookmark_url", bookmark.URL).Logger()
 
 					if err := bookmark.FetchContent(); err != nil {
 						logger.Warn().Err(err).Msg("Error fetching content")
@@ -88,6 +94,8 @@ func (w *worker) Start() {
 						logger.Warn().Err(err).Msg("Error saving content")
 						return
 					}
+
+					logger.Info("Content for bookmark fetched")
 				} else if work.Type == "Feed.Refresh" {
 					feed := storage.Feed{ID: work.ID}
 					if err := w.store.GetFeed(&feed); err != nil {
@@ -95,12 +103,16 @@ func (w *worker) Start() {
 						return
 					}
 
+					logger := logger.With().Str("feed_url", feed.URL).Logger()
+
 					if err := w.store.RefreshFeed(&feed); err != nil {
 						logger.Warn().Err(err).Msg("Error refreshing feed")
 						return
 					}
+
+					logger.Info("Feed refreshed")
 				} else {
-					log.Printf("Unknown work received: %s", work.Type)
+					logger.Warn().Msg("Unknown work received")
 				}
 
 				logger.Info().Msg("Work is done")
