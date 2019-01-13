@@ -29,6 +29,7 @@ ARG VERSION=unknown
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 RUN go build -v -o bookmarks \
+        --tags "fts5" \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
