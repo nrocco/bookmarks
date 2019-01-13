@@ -98,6 +98,7 @@ func (bookmark *Bookmark) FetchContent() error {
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
 	Search   string
+	Tag      string
 	Archived bool
 	Limit    int
 	Offset   int
@@ -107,20 +108,25 @@ type ListBookmarksOptions struct {
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
 	query := store.db.Select("bookmarks")
 
-	query.Where("archived = ?", options.Archived)
+	query.Where("bookmarks.archived = ?", options.Archived)
 
 	if options.Search != "" {
-		query.Where("(title LIKE ? OR url LIKE ? OR content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("bookmarks.id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
+	}
+
+	if options.Tag != "" {
+		query.Join("LEFT JOIN bookmarks_tags ON bookmarks_tags.bookmark_id = bookmarks.id")
+		query.Where("bookmarks_tags.name = ?", options.Tag)
 	}
 
 	bookmarks := []*Bookmark{}
 	totalCount := 0
 
-	query.Columns("COUNT(id)")
+	query.Columns("COUNT(bookmarks.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("*")
-	query.OrderBy("created", "DESC")
+	query.Columns("bookmarks.*")
+	query.OrderBy("bookmarks.created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&bookmarks)
