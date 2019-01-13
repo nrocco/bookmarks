@@ -125,7 +125,8 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Columns("COUNT(bookmarks.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("bookmarks.*")
+	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content", "bookmarks.archived")
+
 	query.OrderBy("bookmarks.created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
