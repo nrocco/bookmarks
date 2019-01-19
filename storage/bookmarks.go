@@ -31,7 +31,6 @@ type Bookmark struct {
 	URL      string
 	Tags     []string
 	Content  string
-	Archived bool
 }
 
 // Validate is used to assert Title and URL are set
@@ -99,7 +98,6 @@ func (bookmark *Bookmark) FetchContent() error {
 type ListBookmarksOptions struct {
 	Search   string
 	Tag      string
-	Archived bool
 	Limit    int
 	Offset   int
 }
@@ -107,8 +105,6 @@ type ListBookmarksOptions struct {
 // ListBookmarks fetches multiple bookmarks from the database
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
 	query := store.db.Select("bookmarks")
-
-	query.Where("bookmarks.archived = ?", options.Archived)
 
 	if options.Search != "" {
 		query.Where("bookmarks.id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
@@ -125,7 +121,7 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Columns("COUNT(bookmarks.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content", "bookmarks.archived")
+	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content")
 
 	query.OrderBy("bookmarks.created", "DESC")
 	query.Limit(options.Limit)
@@ -213,7 +209,6 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 	query.Set("title", bookmark.Title)
 	query.Set("url", bookmark.URL)
 	query.Set("content", bookmark.Content)
-	query.Set("archived", bookmark.Archived)
 	query.Where("id = ?", bookmark.ID)
 
 	if _, err := query.Exec(); err != nil {
