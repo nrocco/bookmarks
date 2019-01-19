@@ -4,20 +4,24 @@ services:
   frontend:
     build:
       context: ./
-      target: npmbuilder
-    command: ["npm", "run", "serve"]
+      target: npmbase
+    command: ["sh", "-c", "test -f node_modules/.bin/vue-cli-service || npm install; npm run serve"]
     ports:
       - "8080:8080"
     volumes:
+      - "./web/.browserslistrc:/app/.browserslistrc"
+      - "./web/.eslintrc.js:/app/.eslintrc.js"
+      - "./web/babel.config.js:/app/babel.config.js"
+      - "./web/package-lock.json:/app/package-lock.json"
+      - "./web/package.json:/app/package.json"
+      - "./web/postcss.config.js:/app/postcss.config.js"
       - "./web/public:/app/public"
       - "./web/src:/app/src"
-      - "./web/package.json:/app/package.json"
-      - "./web/package-lock.json:/app/package-lock.json"
       - "./web/vue.config.js:/app/vue.config.js"
   backend:
     build:
       context: ./
-      target: gobuilder
+      target: gobase
     command: ["modd", "--debug"]
     ports:
       - "3000:3000"

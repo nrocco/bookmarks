@@ -1,13 +1,4 @@
-FROM node:alpine AS npmbuilder
-RUN mkdir -p /app
-WORKDIR /app
-COPY web/package*.json /app/
-RUN npm install --no-progress
-COPY web/ /app/
-RUN npm run lint --no-progress
-RUN npm run build --production --no-progress
-###############################################################################
-FROM golang:alpine AS gobuilder
+FROM golang:alpine as gobase
 RUN apk add --no-cache \
         ca-certificates \
         gcc \
@@ -17,6 +8,26 @@ RUN apk add --no-cache \
     && go get -u github.com/jteeuwen/go-bindata/... \
     && go get -u github.com/cortesi/modd/cmd/modd \
     && go get -u golang.org/x/lint/golint
+WORKDIR /src
+
+
+
+FROM node:alpine AS npmbase
+WORKDIR /app
+
+
+
+FROM npmbase AS npmbuilder
+WORKDIR /app
+COPY web/package*.json /app/
+RUN npm install --no-progress
+COPY web/ /app/
+RUN npm run lint --no-progress
+RUN npm run build --production --no-progress
+
+
+
+FROM gobase AS gobuilder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -34,7 +45,9 @@ RUN go build -v -o bookmarks \
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
             -X github.com/nrocco/bookmarks/cmd.buildDate=${BUILD_DATE}"
-###############################################################################
+
+
+
 FROM alpine:edge
 RUN apk add --no-cache \
         ca-certificates \
