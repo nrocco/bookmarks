@@ -1,3 +1,6 @@
 lint:
 	golint ./...
 	go vet ./...
+
+container:
+	docker build --build-arg VERSION=latest -t "nrocco/bookmarks:latest" .
