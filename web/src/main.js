@@ -3,16 +3,16 @@ import App from './App'
 import Moment from 'vue-moment'
 
 import router from './router'
-import store from './store'
+import client from './client'
 
 import 'bulma/css/bulma.css'
 
 Vue.use(Moment)
 
 Vue.config.productionTip = false
+Vue.prototype.$http = client
 
 new Vue({
   router,
-  store,
   render: h => h(App)
 }).$mount('#app')

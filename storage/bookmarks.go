@@ -24,13 +24,13 @@ func init() {
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID       int64
-	Created  time.Time
-	Updated  time.Time
-	Title    string
-	URL      string
-	Tags     []string
-	Content  string
+	ID      int64
+	Created time.Time
+	Updated time.Time
+	Title   string
+	URL     string
+	Tags    []string
+	Content string
 }
 
 // Validate is used to assert Title and URL are set
@@ -96,10 +96,10 @@ func (bookmark *Bookmark) FetchContent() error {
 
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
-	Search   string
-	Tag      string
-	Limit    int
-	Offset   int
+	Search string
+	Tag    string
+	Limit  int
+	Offset int
 }
 
 // ListBookmarks fetches multiple bookmarks from the database
@@ -122,7 +122,6 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.LoadValue(&totalCount)
 
 	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content")
-
 	query.OrderBy("bookmarks.created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
@@ -183,6 +182,16 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 
 		l.Error().Err(err).Msg("Error persisting bookmark")
 		return err
+	}
+
+	for _, tag := range bookmark.Tags {
+		query := store.db.Insert("bookmarks_tags")
+		query.Columns("bookmark_id", "name")
+		query.Values(bookmark.ID, tag)
+
+		if _, err := query.Exec(); err != nil {
+			return err
+		}
 	}
 
 	l.Info().Msg("Persisted bookmark")

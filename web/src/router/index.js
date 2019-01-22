@@ -21,23 +21,13 @@ export default new Router({
       component: Base,
       children: [
         {
-          name: 'readitlater',
+          name: 'bookmarks',
           path: '/',
           component: BookmarkList,
           meta: {
-            title: 'Read it later',
-            subtitle: 'All articles you recently saved',
+            title: 'Bookmarks',
+            subtitle: 'All articles you bookmarked',
             color: 'is-primary'
-          }
-        },
-        {
-          name: 'archive',
-          path: '/archive',
-          component: BookmarkList,
-          meta: {
-            title: 'Archive',
-            subtitle: 'All articles you archived',
-            color: 'is-dark'
           }
         },
         {
