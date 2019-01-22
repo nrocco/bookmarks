@@ -68,7 +68,7 @@ func (store *Store) ListFeedItems(options *ListFeedItemsOptions) (*[]*FeedItem, 
 	query.Columns("COUNT(i.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("i.*")
+	query.Columns("i.id", "i.feed_id", "i.created", "i.updated", "i.title", "i.date", "i.url", "substr(i.content, 0, 500) AS content")
 	query.OrderBy("i.date", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)

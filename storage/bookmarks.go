@@ -24,14 +24,13 @@ func init() {
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID       int64
-	Created  time.Time
-	Updated  time.Time
-	Title    string
-	URL      string
-	Tags     []string
-	Content  string
-	Archived bool
+	ID      int64
+	Created time.Time
+	Updated time.Time
+	Title   string
+	URL     string
+	Tags    []string
+	Content string
 }
 
 // Validate is used to assert Title and URL are set
@@ -97,18 +96,15 @@ func (bookmark *Bookmark) FetchContent() error {
 
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
-	Search   string
-	Tag      string
-	Archived bool
-	Limit    int
-	Offset   int
+	Search string
+	Tag    string
+	Limit  int
+	Offset int
 }
 
 // ListBookmarks fetches multiple bookmarks from the database
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
 	query := store.db.Select("bookmarks")
-
-	query.Where("bookmarks.archived = ?", options.Archived)
 
 	if options.Search != "" {
 		query.Where("bookmarks.id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
@@ -125,8 +121,7 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Columns("COUNT(bookmarks.id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content", "bookmarks.archived")
-
+	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content")
 	query.OrderBy("bookmarks.created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
@@ -189,6 +184,16 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 		return err
 	}
 
+	for _, tag := range bookmark.Tags {
+		query := store.db.Insert("bookmarks_tags")
+		query.Columns("bookmark_id", "name")
+		query.Values(bookmark.ID, tag)
+
+		if _, err := query.Exec(); err != nil {
+			return err
+		}
+	}
+
 	l.Info().Msg("Persisted bookmark")
 
 	// TODO move this: WorkQueue <- WorkRequest{Type: "Bookmark.FetchContent", Bookmark: *bookmark}
@@ -213,7 +218,6 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 	query.Set("title", bookmark.Title)
 	query.Set("url", bookmark.URL)
 	query.Set("content", bookmark.Content)
-	query.Set("archived", bookmark.Archived)
 	query.Where("id = ?", bookmark.ID)
 
 	if _, err := query.Exec(); err != nil {

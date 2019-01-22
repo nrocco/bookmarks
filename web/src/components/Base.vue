@@ -19,8 +19,7 @@
         <nav class="tabs is-boxed is-right">
           <div class="container">
             <ul>
-              <li><router-link exact active-class="is-active" tag="li" to="/"><a>Read It Later</a></router-link></li>
-              <li><router-link exact active-class="is-active" tag="li" to="/archive"><a>Archive</a></router-link></li>
+              <li><router-link exact active-class="is-active" tag="li" to="/"><a>Bookmarks</a></router-link></li>
               <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
             </ul>
           </div>
