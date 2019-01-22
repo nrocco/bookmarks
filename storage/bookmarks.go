@@ -52,7 +52,11 @@ func (bookmark *Bookmark) FetchContent() error {
 
 	logger.Info().Msg("Fetching bookmark content")
 
-	response, err := http.Get(bookmark.URL)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", bookmark.URL, nil)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15")
+	response, err := client.Do(req)
+
 	if err != nil {
 		logger.Warn().Str("status", response.Status).Err(err).Msg("Error fetching content")
 		return err
