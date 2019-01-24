@@ -46,7 +46,7 @@
 export default {
   computed: {
     snippet () {
-      return "javascript:(function(){window.location = '" + location.protocol + '//' + location.host + "/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();"
+      return "javascript:(function(){window.location='"+location.protocol+'//'+location.host+"/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();"
     },
     title () {
       return this.$route.meta.title
