@@ -31,8 +31,6 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex'
-
 export default {
   props: {
     feed: Object
@@ -41,10 +39,6 @@ export default {
     return {}
   },
   methods: {
-    ...mapActions({
-      onRefreshFeedClicked: 'refreshFeed',
-      onDeleteFeedClicked: 'deleteFeed'
-    })
   }
 }
 </script>
