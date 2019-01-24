@@ -9,15 +9,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - "./web/.browserslistrc:/app/.browserslistrc"
-      - "./web/.eslintrc.js:/app/.eslintrc.js"
-      - "./web/babel.config.js:/app/babel.config.js"
-      - "./web/package-lock.json:/app/package-lock.json"
-      - "./web/package.json:/app/package.json"
-      - "./web/postcss.config.js:/app/postcss.config.js"
-      - "./web/public:/app/public"
-      - "./web/src:/app/src"
-      - "./web/vue.config.js:/app/vue.config.js"
+      - "./web:/app/"
+      - "/app/node_modules"
   backend:
     build:
       context: ./
@@ -27,4 +20,5 @@ services:
       - "3000:3000"
     volumes:
       - "./:/src"
+      - "/go"
       - "/var/lib/bookmarks"
