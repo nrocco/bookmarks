@@ -4,7 +4,7 @@
       <div class="hero-header">
         <div class="container has-text-right logout">
           <p>
-            <a @click.prevent="open=true" class="is-size-7">Bookmarklet</a>
+            <a @click="isBookmarkletModalActive = true" class="is-size-7">Bookmarklet</a>
             <a @click.prevent="onLogoutClicked" class="is-size-7"><span class="icon"><i class="fa fa-sign-out" aria-hidden="true"></i></span><span>Logout</span></a>
           </p>
         </div>
@@ -32,21 +32,24 @@
       </div>
     </section>
 
-    <div class="modal" :class="{'is-active':open}">
-      <div class="modal-background"></div>
-      <div class="modal-content">
-        <textarea class="textarea" v-model="snippet"></textarea>
+    <b-modal :active.sync="isBookmarkletModalActive" has-modal-card scroll="keep">
+      <div class="card">
+        <div class="card-image">
+          <pre class="bookmarklet">javascript:(function(){window.location='{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</pre>
+        </div>
+        <div class="card-content">
+          <p>Bookmark this page, then replace the url of the bookmark you just created with the above javascript snippet.</p>
+        </div>
       </div>
-      <button class="modal-close is-large" aria-label="close" @click.prevent="open=false"></button>
-    </div>
+    </b-modal>
   </div>
 </template>
 
 <script>
 export default {
   computed: {
-    snippet () {
-      return "javascript:(function(){window.location='"+location.protocol+'//'+location.host+"/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();"
+    baseurl () {
+      return location.protocol + '//' + location.host
     },
     title () {
       return this.$route.meta.title
@@ -59,7 +62,7 @@ export default {
     }
   },
   data: () => ({
-    open: false
+    isBookmarkletModalActive: false
   }),
   methods: {
     onLogoutClicked (event) {
@@ -72,6 +75,10 @@ export default {
 </script>
 
 <style scoped>
+  .bookmarklet {
+    word-wrap: break-word;
+    word-break: break-all;
+  }
   .logout {
     margin-top: 1rem;
     margin-right: 2rem;
