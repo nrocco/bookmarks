@@ -10,7 +10,7 @@ services:
       - "8080:8080"
     volumes:
       - "./web:/app/"
-      - "/app/node_modules"
+      - "node_modules:/app/node_modules"
   backend:
     build:
       context: ./
@@ -20,5 +20,9 @@ services:
       - "3000:3000"
     volumes:
       - "./:/src"
-      - "/go"
-      - "/var/lib/bookmarks"
+      - "go_modules:/go"
+      - "bookmarks_state:/var/lib/bookmarks"
+volumes:
+  node_modules:
+  go_modules:
+  bookmarks_state:
