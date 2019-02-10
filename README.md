@@ -3,6 +3,8 @@ bookmarks
 
 Personal zero-touch bookmarking app in the cloud, with full text search support.
 
+![Screenshot](screenshot.png)
+
 
 Installation
 ------------
