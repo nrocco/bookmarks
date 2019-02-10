@@ -32,16 +32,15 @@
       </div>
     </section>
 
-    <b-modal :active.sync="isBookmarkletModalActive" has-modal-card scroll="keep">
-      <div class="card">
-        <div class="card-image">
+    <div class="modal" scroll="keep" :class="{'is-active': isBookmarkletModalActive}">
+      <div class="modal-background" @click="isBookmarkletModalActive = false"></div>
+      <div class="modal-card">
+        <section class="modal-card-body">
           <pre class="bookmarklet">javascript:(function(){window.location='{{ baseurl }}/bookmarks/save?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title);})();</pre>
-        </div>
-        <div class="card-content">
           <p>Bookmark this page, then replace the url of the bookmark you just created with the above javascript snippet.</p>
-        </div>
+        </section>
       </div>
-    </b-modal>
+    </div>
   </div>
 </template>
 
