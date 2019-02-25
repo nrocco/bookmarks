@@ -35,7 +35,6 @@ func (item *FeedItem) Validate() error {
 
 // ToBookmark converts the feed item to a bookmark
 func (item *FeedItem) ToBookmark() *Bookmark {
-	// TODO also copy Feed.Tags to Bookmark.Tags
 	return &Bookmark{
 		Title:   item.Title,
 		URL:     item.URL,

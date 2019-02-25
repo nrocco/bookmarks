@@ -2,8 +2,6 @@ package storage
 
 import (
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jaytaylor/html2text"
@@ -20,7 +18,7 @@ type Feed struct {
 	LastAuthored time.Time
 	Title        string
 	URL          string
-	Tags         []string
+	Archived     bool
 	Items        int
 }
 
@@ -72,8 +70,6 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&feeds)
-
-	store.fetchFeedsTags(feeds)
 
 	return &feeds, totalCount
 }
@@ -159,24 +155,6 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query.Where("id = ?", feed.ID)
 
 	if _, err := query.Exec(); err != nil {
-		return err
-	}
-
-	for _, tag := range feed.Tags {
-		query := store.db.Insert("feeds_tags")
-		query.Columns("feed_id", "name")
-		query.Values(feed.ID, tag)
-
-		if _, err := query.Exec(); err != nil {
-			return err
-		}
-	}
-
-	deleteTagsQuery := store.db.Delete("feeds_tags")
-	deleteTagsQuery.Where("feed_id = ?", feed.ID)
-	deleteTagsQuery.Where("name NOT IN ('"+strings.Join(feed.Tags, "','")+"')", nil)
-
-	if _, err := deleteTagsQuery.Exec(); err != nil {
 		return err
 	}
 
@@ -280,34 +258,6 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 	}
 
 	logger.Info().Msg("Feed updated")
-
-	return nil
-}
-
-func (store *Store) fetchFeedsTags(feeds []*Feed) error {
-	feedsMap := map[int64]*Feed{}
-	feedIds := []string{}
-
-	for _, feed := range feeds {
-		feed.Tags = []string{}
-		feedsMap[feed.ID] = feed
-		feedIds = append(feedIds, strconv.FormatInt(feed.ID, 10))
-	}
-
-	query := store.db.Select("feeds_tags")
-	query.Columns("feed_id", "name")
-	query.Where("feed_id IN ("+strings.Join(feedIds, ",")+")", nil)
-	query.OrderBy("name", "ASC")
-
-	var feedTags []struct {
-		FeedID int64
-		Name   string
-	}
-	query.Load(&feedTags)
-
-	for _, feedTag := range feedTags {
-		feedsMap[feedTag.FeedID].Tags = append(feedsMap[feedTag.FeedID].Tags, feedTag.Name)
-	}
 
 	return nil
 }

@@ -3,9 +3,9 @@
     <div class="field has-addons">
       <p class="control">
         <span class="select">
-          <select v-model="filters.tag" @change="onFilterChange">
-            <option :value="undefined">all tags</option>
-            <option v-for="tag in tags" :value="tag.Name" :key="tag.Name">{{ tag.Name }}</option>
+          <select v-model="filters.archived" @change="onFilterChange">
+            <option :value="undefined">New</option>
+            <option value="true">Archived</option>
           </select>
         </span>
       </p>
@@ -21,13 +21,11 @@
       <p class="is-size-7">
         <a class="url" :href="bookmark.URL">{{ bookmark.URL }}</a>
         <span> - </span>
+        <a @click.prevent="onToggleArchivedClicked(bookmark)" :class="{'has-text-primary': !bookmark.Archived, 'has-text-info': bookmark.Archived}">{{ bookmark.Archived ? 'Read it Later' : 'Archive' }}</a>
+        <span> - </span>
         <a @click.prevent="onRemoveClicked(bookmark)" class="has-text-danger">Remove</a>
       </p>
-      <div class="tags">
-        <span class="tag" v-for="tag in bookmark.Tags" :key="bookmark.ID+tag">{{ tag }} <button class="delete is-small" @click.prevent="onRemoveTagClicked(bookmark, tag)"></button></span>
-        <span class="tag" contenteditable @keyup.enter="onTagEntered(bookmark, $event)"></span>
-      </div>
-      <p class="content">{{ bookmark.Content }}</p>
+      <p class="content">{{ bookmark.Content }}&#8230;</p>
     </div>
   </div>
 </template>
@@ -42,22 +40,17 @@ export default {
 
   data: () => ({
     filters: {},
-    tags: [],
+    archived: null,
     bookmarks: []
   }),
 
   methods: {
     onLoad (filters) {
       this.bookmarks = []
-      this.tags = []
       this.filters = filters
 
       this.$http.get(`/bookmarks`, { params: this.filters }).then(response => {
         this.bookmarks = response.data
-      })
-
-      this.$http.get(`/tags`).then((response) => {
-        this.tags = response.data
       })
     },
 
@@ -65,24 +58,10 @@ export default {
       this.changeRouteOnFilterChange(this.filters)
     },
 
-    onRemoveTagClicked (bookmark, tag) {
-      bookmark.Tags.splice(bookmark.Tags.indexOf(tag), 1)
-      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Tags: bookmark.Tags }).then(response => {
-        bookmark = response.data
+    onToggleArchivedClicked (bookmark) {
+      this.$http.patch(`/bookmarks/${bookmark.ID}`, {Archived: !bookmark.Archived}).then(response => {
+        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
-    },
-
-    onTagEntered (bookmark, event) {
-      let tag = event.target.innerText.toString().trim()
-      if (!tag) {
-        return
-      }
-      bookmark.Tags.push(tag)
-      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Tags: bookmark.Tags }).then(response => {
-        bookmark = response.data
-      })
-      event.target.innerText = ''
-      return false
     },
 
     onRemoveClicked (bookmark) {
@@ -99,17 +78,10 @@ export default {
   border-bottom: 1px solid hsl(0, 0%, 96%);
   padding-bottom: 1.5rem;
 }
-.bookmark-tags {
-  margin-top: 0.75rem;
-}
 .bookmark .url {
   word-break: break-all;
 }
 .content:not(:last-child) {
   margin-bottom: 0.5rem;
-}
-.bookmark .tags:not(:last-child) {
-  margin-top: 0.5rem;
-  margin-bottom: 0;
 }
 </style>

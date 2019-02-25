@@ -6,8 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/JalfResi/justext"
@@ -24,13 +22,13 @@ func init() {
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID      int64
-	Created time.Time
-	Updated time.Time
-	Title   string
-	URL     string
-	Tags    []string
-	Content string
+	ID       int64
+	Created  time.Time
+	Updated  time.Time
+	Title    string
+	URL      string
+	Content  string
+	Archived bool
 }
 
 // Validate is used to assert Title and URL are set
@@ -100,38 +98,33 @@ func (bookmark *Bookmark) FetchContent() error {
 
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
-	Search string
-	Tag    string
-	Limit  int
-	Offset int
+	Search   string
+	Archived bool
+	Limit    int
+	Offset   int
 }
 
 // ListBookmarks fetches multiple bookmarks from the database
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
 	query := store.db.Select("bookmarks")
 
-	if options.Search != "" {
-		query.Where("bookmarks.id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
-	}
+	query.Where("archived = ?", options.Archived)
 
-	if options.Tag != "" {
-		query.Join("LEFT JOIN bookmarks_tags ON bookmarks_tags.bookmark_id = bookmarks.id")
-		query.Where("bookmarks_tags.name = ?", options.Tag)
+	if options.Search != "" {
+		query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
 	}
 
 	bookmarks := []*Bookmark{}
 	totalCount := 0
 
-	query.Columns("COUNT(bookmarks.id)")
+	query.Columns("COUNT(id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("bookmarks.id", "bookmarks.created", "bookmarks.updated", "bookmarks.title", "bookmarks.url", "substr(bookmarks.content, 0, 300) AS content")
-	query.OrderBy("bookmarks.created", "DESC")
+	query.Columns("id", "created", "updated", "archived", "title", "url", "substr(content, 0, 300) AS content")
+	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&bookmarks)
-
-	store.fetchBookmarksTags(bookmarks)
 
 	return &bookmarks, totalCount
 }
@@ -153,8 +146,6 @@ func (store *Store) GetBookmark(bookmark *Bookmark) error {
 		return err
 	}
 
-	store.fetchBookmarksTags([]*Bookmark{bookmark})
-
 	return nil
 }
 
@@ -172,7 +163,7 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 	bookmark.Updated = time.Now()
 
 	query := store.db.Insert("bookmarks")
-	query.Columns("title", "created", "updated", "url", "content")
+	query.Columns("title", "created", "updated", "url", "archived", "content")
 	query.Record(bookmark)
 
 	l := log.With().Int64("id", bookmark.ID).Str("title", bookmark.Title).Str("url", bookmark.URL).Logger()
@@ -186,16 +177,6 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 
 		l.Error().Err(err).Msg("Error persisting bookmark")
 		return err
-	}
-
-	for _, tag := range bookmark.Tags {
-		query := store.db.Insert("bookmarks_tags")
-		query.Columns("bookmark_id", "name")
-		query.Values(bookmark.ID, tag)
-
-		if _, err := query.Exec(); err != nil {
-			return err
-		}
 	}
 
 	l.Info().Msg("Persisted bookmark")
@@ -222,27 +203,10 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 	query.Set("title", bookmark.Title)
 	query.Set("url", bookmark.URL)
 	query.Set("content", bookmark.Content)
+	query.Set("archived", bookmark.Archived)
 	query.Where("id = ?", bookmark.ID)
 
 	if _, err := query.Exec(); err != nil {
-		return err
-	}
-
-	for _, tag := range bookmark.Tags {
-		query := store.db.Insert("bookmarks_tags")
-		query.Columns("bookmark_id", "name")
-		query.Values(bookmark.ID, tag)
-
-		if _, err := query.Exec(); err != nil {
-			return err
-		}
-	}
-
-	deleteTagsQuery := store.db.Delete("bookmarks_tags")
-	deleteTagsQuery.Where("bookmark_id = ?", bookmark.ID)
-	deleteTagsQuery.Where("name NOT IN ('"+strings.Join(bookmark.Tags, "','")+"')", nil)
-
-	if _, err := deleteTagsQuery.Exec(); err != nil {
 		return err
 	}
 
@@ -260,34 +224,6 @@ func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
 
 	if _, err := query.Exec(); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (store *Store) fetchBookmarksTags(bookmarks []*Bookmark) error {
-	bookmarksMap := map[int64]*Bookmark{}
-	bookmarkIds := []string{}
-
-	for _, bookmark := range bookmarks {
-		bookmark.Tags = []string{}
-		bookmarksMap[bookmark.ID] = bookmark
-		bookmarkIds = append(bookmarkIds, strconv.FormatInt(bookmark.ID, 10))
-	}
-
-	query := store.db.Select("bookmarks_tags")
-	query.Columns("bookmark_id", "name")
-	query.Where("bookmark_id IN ("+strings.Join(bookmarkIds, ",")+")", nil)
-	query.OrderBy("name", "ASC")
-
-	var bookmarkTags []struct {
-		BookmarkID int64
-		Name       string
-	}
-	query.Load(&bookmarkTags)
-
-	for _, bookmarkTag := range bookmarkTags {
-		bookmarksMap[bookmarkTag.BookmarkID].Tags = append(bookmarksMap[bookmarkTag.BookmarkID].Tags, bookmarkTag.Name)
 	}
 
 	return nil

@@ -34,7 +34,6 @@ func New(store *storage.Store, queue *queue.Queue, auth bool) *API {
 		r.Mount("/bookmarks", bookmarks{store, queue}.Routes())
 		r.Mount("/feeds", feeds{store, queue}.Routes())
 		r.Mount("/items", items{store, queue}.Routes())
-		r.Mount("/tags", tags{store}.Routes())
 	})
 
 	r.Get("/*", bindataAssetHandler)

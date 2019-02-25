@@ -20,10 +20,6 @@
     <div class="block feed-item" v-for="item in items" :key="item.ID">
       <p class="has-text-weight-bold">{{ item.Title }}</p>
       <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
-      <div class="tags has-addons" v-for="tag in getFeedForItem(item).Tags" :key="tag">
-        <span class="tag">{{ tag }}</span>
-        <a class="tag is-delete"></a>
-      </div>
       <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}...</p>
       <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
@@ -106,9 +102,5 @@ export default {
 }
 .select select {
   width: 100%;
-}
-.feed-item .tags:not(:last-child) {
-  margin-top: 0.5rem;
-  margin-bottom: 0;
 }
 </style>
