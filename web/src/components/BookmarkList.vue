@@ -59,7 +59,7 @@ export default {
     },
 
     onToggleArchivedClicked (bookmark) {
-      this.$http.patch(`/bookmarks/${bookmark.ID}`, {Archived: !bookmark.Archived}).then(response => {
+      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Archived: !bookmark.Archived }).then(response => {
         this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     },
