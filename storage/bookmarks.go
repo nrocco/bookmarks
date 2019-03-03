@@ -98,17 +98,19 @@ func (bookmark *Bookmark) FetchContent() error {
 
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
-	Search   string
-	Archived bool
-	Limit    int
-	Offset   int
+	Search      string
+	ReadItLater bool
+	Limit       int
+	Offset      int
 }
 
 // ListBookmarks fetches multiple bookmarks from the database
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
 	query := store.db.Select("bookmarks")
 
-	query.Where("archived = ?", options.Archived)
+	if options.ReadItLater {
+		query.Where("archived = ?", false)
+	}
 
 	if options.Search != "" {
 		query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)

@@ -39,10 +39,10 @@ func (api bookmarks) Routes() chi.Router {
 
 func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
 	bookmarks, totalCount := api.store.ListBookmarks(&storage.ListBookmarksOptions{
-		Search:   r.URL.Query().Get("q"),
-		Archived: (r.URL.Query().Get("archived") == "true"),
-		Limit:    50, // TODO allow client to set this
-		Offset:   0,  // TODO allow client to set this
+		Search:      r.URL.Query().Get("q"),
+		ReadItLater: (r.URL.Query().Get("readitlater") == "true"),
+		Limit:       50, // TODO allow client to set this
+		Offset:      0,  // TODO allow client to set this
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))

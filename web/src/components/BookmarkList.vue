@@ -1,21 +1,11 @@
 <template>
   <div>
     <div class="field has-addons">
-      <p class="control">
-        <span class="select">
-          <select v-model="filters.archived" @change="onFilterChange">
-            <option :value="undefined">New</option>
-            <option value="true">Archived</option>
-          </select>
-        </span>
-      </p>
       <p class="control is-expanded">
         <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
       </p>
     </div>
-
     <hr/>
-
     <div class="block bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
       <p class="is-size-7">
@@ -40,7 +30,6 @@ export default {
 
   data: () => ({
     filters: {},
-    archived: null,
     bookmarks: []
   }),
 
@@ -49,7 +38,14 @@ export default {
       this.bookmarks = []
       this.filters = filters
 
-      this.$http.get(`/bookmarks`, { params: this.filters }).then(response => {
+      let params = {}
+      if (!this.filters.q) {
+        params.readitlater = 'true'
+      } else {
+        params.q = this.filters.q
+      }
+
+      this.$http.get(`/bookmarks`, { params: params }).then(response => {
         this.bookmarks = response.data
       })
     },
