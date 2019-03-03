@@ -1,26 +1,51 @@
 <template>
   <div>
     <div class="block">
-      <div class="field">
-        <div class="control">
+      <div class="field has-addons">
+        <div class="control is-expanded">
           <div class="select">
-            <select v-model="selectedFeedId">
+            <select v-model="filters.feed" @change="onFilterChange">
               <option :value="undefined">All</option>
               <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }} ({{ feed.Items }})</option>
             </select>
           </div>
         </div>
+
+        <div v-if="selectedFeed" class="dropdown is-right is-pulled-right is-hoverable">
+          <div class="dropdown-trigger">
+            <button class="button is-info" aria-haspopup="true" aria-controls="feed-menu">
+              <span>Manage</span>
+              <span class="icon is-small">
+                <i class="fas fa-angle-down" aria-hidden="true"></i>
+              </span>
+            </button>
+          </div>
+          <div class="dropdown-menu" id="feed-menu" role="menu">
+            <div class="dropdown-content">
+              <div class="dropdown-item">
+                <p><a class="url" :href="selectedFeed.URL">{{ selectedFeed.URL }}</a></p>
+              </div>
+              <div class="dropdown-item">
+                <p>Last item created: <i :title="selectedFeed.LastAuthored|moment('dddd, MMMM Do YYYY, HH:mm')">{{ selectedFeed.LastAuthored|moment("from") }}</i></p>
+              </div>
+              <div class="dropdown-item">
+                <p>Last refreshed: <i :title="selectedFeed.Refreshed|moment('dddd, MMMM Do YYYY, HH:mm')">{{ selectedFeed.Refreshed|moment("from") }}</i></p>
+              </div>
+              <hr class="dropdown-divider">
+              <a class="dropdown-item is-primary is-outlined" @click.prevent="onRefreshFeedClicked(selectedFeed)">Refresh Feed</a>
+              <a class="dropdown-item is-danger is-outlined" @click.prevent="onDeleteFeedClicked(selectedFeed)">Delete Feed</a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <feed-details v-if="selectedFeedId" :feed="selectedFeed" />
 
     <hr/>
 
     <div class="block feed-item" v-for="item in items" :key="item.ID">
       <p class="has-text-weight-bold">{{ item.Title }}</p>
       <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
-      <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}...</p>
+      <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}&#8230;</p>
       <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
         <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
@@ -30,58 +55,70 @@
 </template>
 
 <script>
-import FeedDetails from './FeedDetails'
+import LoaderMixin from '../mixins/loader.js'
 
 export default {
-  components: {
-    FeedDetails
-  },
-  data () {
-    return {
-      selectedFeedId: '',
-      feeds: [],
-      items: []
-    }
-  },
+  mixins: [
+    LoaderMixin
+  ],
+
+  data: () => ({
+    filters: {},
+    feeds: [],
+    items: []
+  }),
+
   computed: {
     selectedFeed () {
-      return this.feeds.filter(feed => feed.ID === this.selectedFeedId).shift()
+      if (!this.filters.feed) {
+        return null
+      }
+      return this.feeds.filter(feed => feed.ID === parseInt(this.filters.feed)).shift()
     }
   },
+
   methods: {
-    loadFeeds () {
+    onLoad (filters) {
+      this.feeds = []
+      this.items = []
+      this.filters = filters
+
       this.$http.get(`/feeds`).then(response => {
         this.feeds = response.data
       })
-      this.$http.get(`/items`).then(response => {
+
+      this.$http.get(`/items`, { params: this.filters }).then(response => {
         this.items = response.data
       })
     },
-    getFeedForItem (item) {
-      return this.feeds.filter(feed => {
-        return item.FeedID === feed.ID
-      }).shift()
+
+    onFilterChange (event) {
+      this.changeRouteOnFilterChange(this.filters)
     },
+
     onReadItLaterClicked (item) {
       this.$http.post(`/items/${item.ID}/readitlater`).then(response => {
-        item = response.data
+        this.items.splice(this.items.indexOf(item), 1)
       })
     },
+
     onRemoveClicked (item) {
       this.$http.delete(`/items/${item.ID}`).then(response => {
         this.items.splice(this.items.indexOf(item), 1)
       })
+    },
+
+    onRefreshFeedClicked (feed) {
+      this.$http.post(`/feeds/${feed.ID}/refresh`).then(response => {
+        setTimeout(() => window.location.reload(true), 2000)
+      })
+    },
+
+    onDeleteFeedClicked (feed) {
+      this.$http.delete(`/feeds/${feed.ID}`).then(response => {
+        this.changeRouteOnFilterChange({})
+      })
     }
-  },
-  watch: {
-    '$route' (to, from) {
-      this.selectedFeedId = to.query.selectedFeedId
-      this.loadFeeds()
-    }
-  },
-  mounted () {
-    this.selectedFeedId = this.$route.query.selectedFeedId
-    this.loadFeeds()
   }
 }
 </script>
