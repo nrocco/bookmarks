@@ -85,10 +85,14 @@ func (bookmark *Bookmark) FetchContent() error {
 		return err
 	}
 
-	bookmark.Content, err = html2text.FromReader(&b)
+	content, err := html2text.FromReader(&b)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Error converting html to text")
 		return err
+	}
+
+	if content != "" {
+		bookmark.Content = content
 	}
 
 	logger.Info().Msg("Successfully fetched content")
