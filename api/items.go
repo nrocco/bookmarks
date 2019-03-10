@@ -37,8 +37,8 @@ func (api *items) list(w http.ResponseWriter, r *http.Request) {
 	items, totalCount := api.store.ListFeedItems(&storage.ListFeedItemsOptions{
 		Search: r.URL.Query().Get("q"),
 		FeedID: r.URL.Query().Get("feed"),
-		Limit:  100, // TODO allow client to set this
-		Offset: 0,   // TODO allow client to set this
+		Limit:  asInt(query.Get("_limit"), 100),
+		Offset: asInt(query.Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
@@ -81,7 +81,7 @@ func (api *items) readitlater(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
+	api.queue.Schedule("Bookmark.Fetch", bookmark.ID)
 
 	jsonResponse(w, 204, nil)
 }

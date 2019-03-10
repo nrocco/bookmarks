@@ -2,12 +2,25 @@ package storage
 
 import (
 	"errors"
+	"net/http"
 	"time"
 
-	"github.com/jaytaylor/html2text"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15"
+)
+
+var (
+	ErrExistingFeed    = errors.New("Existing feed")
+	ErrNoFeedTitle     = errors.New("Missing Feed.Title")
+	ErrNoFeedURL       = errors.New("Missing Feed.URL")
+	ErrNoPrimaryKey    = errors.New("Missing Feed.ID or Feed.URL")
+	ErrNotExistingFeed = errors.New("Not an existing feed")
 )
 
 type Feed struct {
@@ -18,6 +31,7 @@ type Feed struct {
 	LastAuthored time.Time
 	Title        string
 	URL          string
+	ETag         string
 	Archived     bool
 	Items        int
 }
@@ -25,11 +39,104 @@ type Feed struct {
 // Validate is used to assert Title and URL are set
 func (feed *Feed) Validate() error {
 	if feed.Title == "" {
-		return errors.New("Missing Feed.Title")
+		return ErrNoFeedTitle
 	}
 
 	if feed.URL == "" {
-		return errors.New("Missing Feed.URL")
+		return ErrNoFeedURL
+	}
+
+	return nil
+}
+
+// FetchItems fetches new items from the given Feed
+func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
+	if feed.URL == "" {
+		return ErrNoFeedURL
+	}
+
+	logger := log.With().Str("url", feed.URL).Logger()
+
+	if feed.ID != 0 {
+		logger = logger.With().Int64("id", feed.ID).Logger()
+	}
+
+	logger.Info().Msg("Fetching feed items")
+
+	client := &http.Client{}
+	request, _ := http.NewRequest("GET", feed.URL, nil)
+	request.Header.Set("User-Agent", defaultUserAgent)
+
+	if feed.ETag != "" {
+		request.Header.Set("If-None-Match", feed.ETag)
+		logger.Info().Str("if-none-match", feed.ETag).Msg("Conditional GET")
+	} else if !feed.Refreshed.IsZero() {
+		modifiedSince := feed.Refreshed.UTC().Format(time.RFC1123)
+		request.Header.Set("If-Modified-Since", modifiedSince)
+		logger.Info().Str("if-modified-since", modifiedSince).Msg("Conditional GET")
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Warn().Err(err).Int("status_code", response.StatusCode).Msg("Error fetching feed")
+		return err
+	}
+
+	logger.Info().Int("status_code", response.StatusCode).Msg("Successfully fetched feed")
+
+	if 304 == response.StatusCode {
+		logger.Info().Msg("Feed not updated since the last time we checked")
+		return nil
+	}
+
+	defer response.Body.Close()
+
+	parsedFeed, err := gofeed.NewParser().Parse(response.Body)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Unable to parse xml from feed")
+		return err
+	}
+
+	logger.Info().Int("items", len(parsedFeed.Items)).Msg("Found items in Feed")
+
+	textCleaner := bluemonday.NewPolicy()
+
+	for _, item := range parsedFeed.Items {
+		feedItem := &FeedItem{
+			FeedID:  feed.ID,
+			Created: time.Now(),
+			Updated: time.Now(),
+			Title:   item.Title,
+			URL:     item.Link,
+		}
+
+		if feedItem.Content != "" {
+			feedItem.Content = textCleaner.Sanitize(item.Content)
+		} else {
+			feedItem.Content = textCleaner.Sanitize(item.Description)
+		}
+
+		if item.PublishedParsed != nil {
+			feedItem.Date = *item.PublishedParsed
+		} else if item.UpdatedParsed != nil {
+			feedItem.Date = *item.UpdatedParsed
+		} else {
+			feedItem.Date = time.Now()
+		}
+
+		if feedItem.Date.Before(feed.Refreshed) {
+			continue
+		}
+
+		*feedItems = append(*feedItems, feedItem)
+	}
+
+	feed.LastAuthored = *parsedFeed.UpdatedParsed
+	feed.ETag = response.Header.Get("ETag")
+	feed.Refreshed = time.Now()
+
+	if feed.Title == "" {
+		feed.Title = parsedFeed.Title
 	}
 
 	return nil
@@ -84,7 +191,7 @@ func (store *Store) GetFeed(feed *Feed) error {
 	} else if feed.URL != "" {
 		query.Where("url = ?", feed.URL)
 	} else {
-		return errors.New("Missing Feed.ID or Feed.URL")
+		return ErrNoPrimaryKey
 	}
 
 	if err := query.LoadValue(&feed); err != nil {
@@ -97,7 +204,7 @@ func (store *Store) GetFeed(feed *Feed) error {
 // AddFeed persists a feed to the database and schedules an async job to fetch the content
 func (store *Store) AddFeed(feed *Feed) error {
 	if feed.ID != 0 {
-		return errors.New("Existing feed")
+		return ErrExistingFeed
 	}
 
 	if feed.Title == "" {
@@ -110,7 +217,7 @@ func (store *Store) AddFeed(feed *Feed) error {
 
 	feed.Created = time.Now()
 	feed.Updated = time.Now()
-	feed.Refreshed = time.Time{}
+	feed.Refreshed = time.Now().Add(time.Hour * 24 * 7 * -1) // For new feeds, fetch articles of last 7 days
 
 	query := store.db.Insert("feeds")
 	query.Columns("created", "updated", "refreshed", "title", "url")
@@ -137,7 +244,7 @@ func (store *Store) AddFeed(feed *Feed) error {
 // UpdateFeed updates the given feed
 func (store *Store) UpdateFeed(feed *Feed) error {
 	if feed.ID == 0 {
-		return errors.New("Not an existing feed")
+		return ErrNotExistingFeed
 	}
 
 	if err := feed.Validate(); err != nil {
@@ -164,7 +271,7 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 // DeleteFeed deletes the given feed from the database
 func (store *Store) DeleteFeed(feed *Feed) error {
 	if feed.ID == 0 {
-		return errors.New("Not an existing feed")
+		return ErrNotExistingFeed
 	}
 
 	query := store.db.Delete("items")
@@ -187,70 +294,25 @@ func (store *Store) DeleteFeed(feed *Feed) error {
 // RefreshFeed fetches the rss feed items and persists those to the database
 func (store *Store) RefreshFeed(feed *Feed) error {
 	if feed.ID == 0 {
-		return errors.New("Not an existing feed")
+		return ErrNotExistingFeed
 	}
 
-	fp := gofeed.NewParser()
-	logger := log.With().Int64("feed", feed.ID).Str("url", feed.URL).Logger()
+	logger := log.With().Int64("id", feed.ID).Str("url", feed.URL).Logger()
 
-	parsedFeed, err := fp.ParseURL(feed.URL)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Unable to parse feed")
+	feedItems := []*FeedItem{}
+	if err := feed.Fetch(&feedItems); err != nil {
+		logger.Warn().Err(err).Msg("Unable to fetch feed")
 		return err
 	}
 
-	logger.Info().Int("items", len(parsedFeed.Items)).Msg("Found items in Feed")
-
-	isFirstItem := true
-
-	for _, item := range parsedFeed.Items {
-		date := item.PublishedParsed
-		if date == nil {
-			date = item.UpdatedParsed
-		}
-
-		logger := logger.With().Str("title", item.Title).Logger()
-
-		if isFirstItem {
-			feed.LastAuthored = *date
-			isFirstItem = false
-		}
-
-		if date.Before(feed.Refreshed) {
-			logger.Info().Msg("Found item in the feed we fetched before. Stop importing.")
-			break
-		}
-
-		content := item.Content
-		if content == "" {
-			content = item.Description
-		}
-
-		content, err = html2text.FromString(content)
-		if err != nil {
-			logger.Warn().Err(err).Msg("Error converting html to text")
-			return err
-		}
-
-		query := store.db.Insert("items")
-		query.Columns("feed_id", "created", "updated", "title", "url", "date", "content")
-		query.Values(feed.ID, time.Now(), time.Now(), item.Title, item.Link, date, content)
-
-		if _, err := query.Exec(); err != nil {
-			logger.Warn().Err(err).Msg("Unable to persist feed item")
+	for _, item := range feedItems {
+		if err := store.AddFeedItem(item); err != nil {
+			logger.Warn().Err(err).Str("feed_item_title", item.Title).Msg("Unable to persist feed item")
 			continue
 		}
 
 		logger.Info().Msg("Persisted feed item")
 	}
-
-	feed.Title = parsedFeed.Title
-	feed.Refreshed = time.Now()
-
-	logger.Info().
-		Time("last_authored", feed.LastAuthored).
-		Time("refreshed", feed.Refreshed).
-		Msg("Updating Feed.refreshed")
 
 	if err := store.UpdateFeed(feed); err != nil {
 		logger.Warn().Err(err).Msg("Error updating feed")

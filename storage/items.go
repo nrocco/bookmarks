@@ -96,6 +96,27 @@ func (store *Store) GetFeedItem(item *FeedItem) error {
 	return nil
 }
 
+// AddFeedItem persists a item for a feed to the database
+func (store *Store) AddFeedItem(item *FeedItem) error {
+	if item.ID != 0 {
+		return errors.New("Existing feed item")
+	}
+
+	if item.FeedID == 0 {
+		return errors.New("Feed item does not belong to a Feed")
+	}
+
+	query := store.db.Insert("items")
+	query.Columns("feed_id", "created", "updated", "title", "url", "date", "content")
+	query.Record(item)
+
+	if _, err := query.Exec(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // DeleteFeedItem deletes the given feed item from the database
 func (store *Store) DeleteFeedItem(item *FeedItem) error {
 	if item.ID == 0 {

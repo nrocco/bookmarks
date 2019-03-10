@@ -16,17 +16,14 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 		ticker := time.NewTicker(time.Minute * time.Duration(interval))
 		for range ticker.C {
 			go func() {
-				notRefreshedSince := time.Now().Add(-4 * time.Hour)
-				limit := 8
+				notRefreshedSince := time.Now().Add(-1 * time.Hour)
 
 				log.Info().
-					Int("limit", limit).
 					Time("not_refreshed_since", notRefreshedSince).
 					Msg("Checking for unfresh feeds")
 
 				feeds, _ := store.ListFeeds(&storage.ListFeedsOptions{
 					NotRefreshedSince: notRefreshedSince,
-					Limit:             limit,
 				})
 
 				if len(*feeds) == 0 {
@@ -39,7 +36,7 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 
 				for _, feed := range *feeds {
 					log.Info().Int64("feed_id", feed.ID).Str("feed_title", feed.Title).Msg("Scheduling a refresh")
-					queue.Schedule("Feed.Refresh", feed.ID)
+					queue.Schedule("Feed.Fetch", feed.ID)
 				}
 
 				log.Info().Msg("Done checking unfresh feeds")

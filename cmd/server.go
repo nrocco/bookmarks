@@ -55,7 +55,7 @@ var serverCmd = &cobra.Command{
 func init() {
 	serverCmd.PersistentFlags().IntP("workers", "w", 4, "The number of workers to start")
 	serverCmd.PersistentFlags().StringP("listen", "l", "0.0.0.0:3000", "Address to listen for HTTP requests on")
-	serverCmd.PersistentFlags().IntP("interval", "i", 30, "Fetch new feeds with this interval in minutes (0 to disable)")
+	serverCmd.PersistentFlags().IntP("interval", "i", 15, "Fetch new feeds with this interval in minutes (0 to disable)")
 	serverCmd.PersistentFlags().BoolP("noauth", "n", false, "Disable authentication")
 
 	viper.BindPFlag("workers", serverCmd.PersistentFlags().Lookup("workers"))

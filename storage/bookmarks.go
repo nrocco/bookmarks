@@ -1,24 +1,13 @@
 package storage
 
-//go:generate go-bindata -pkg storage -o stopwords.go stopwords
-
 import (
-	"bytes"
 	"errors"
-	"net/http"
 	"time"
 
-	"github.com/JalfResi/justext"
-	"github.com/jaytaylor/html2text"
+	"github.com/go-shiori/go-readability"
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
-
-func init() {
-	justext.RegisterStoplist("English", func() ([]byte, error) {
-		return Asset("stopwords/English.txt")
-	})
-}
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
@@ -27,75 +16,45 @@ type Bookmark struct {
 	Updated  time.Time
 	Title    string
 	URL      string
+	Excerpt  string
 	Content  string
 	Archived bool
 }
 
-// Validate is used to assert Title and URL are set
-func (bookmark *Bookmark) Validate() error {
+// Fetch downloads the bookmark, reduces the result to a readable plain text format
+func (bookmark *Bookmark) Fetch() error {
 	if bookmark.URL == "" {
-		return errors.New("Missing Bookmark.URL")
+		return errors.New("Bookmark.URL is empty")
 	}
 
-	if bookmark.Title == "" {
-		return errors.New("Missing Bookmark.Title")
+	logger := log.With().Str("url", bookmark.URL).Logger()
+
+	if bookmark.ID != 0 {
+		logger = logger.With().Int64("id", bookmark.ID).Logger()
 	}
-
-	return nil
-}
-
-// FetchContent downloads the bookmark, reduces the result to a readable plain text format
-func (bookmark *Bookmark) FetchContent() error {
-	logger := log.With().Int64("id", bookmark.ID).Str("title", bookmark.Title).Str("url", bookmark.URL).Logger()
 
 	logger.Info().Msg("Fetching bookmark content")
 
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", bookmark.URL, nil)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15")
-	response, err := client.Do(req)
-
+	article, err := readability.FromURL(bookmark.URL, 5*time.Second)
 	if err != nil {
-		logger.Warn().Str("status", response.Status).Err(err).Msg("Error fetching content")
+		logger.Warn().Err(err).Msg("Error fetching bookmark")
 		return err
 	}
 
-	defer response.Body.Close()
+	bookmark.Title = article.Title
+	bookmark.Content = article.Content
 
-	reader := justext.NewReader(response.Body)
-
-	reader.Stoplist, err = justext.GetStoplist("English")
-	if err != nil {
-		logger.Warn().Err(err).Msg("Could not load Stoplist")
-		return err
+	if article.Excerpt == "" {
+		size := 260
+		if len(article.TextContent) < size {
+			size = len(article.TextContent)
+		}
+		bookmark.Excerpt = article.TextContent[0:size]
+	} else {
+		bookmark.Excerpt = article.Excerpt
 	}
 
-	paragraphSet, err := reader.ReadAll()
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed reading HTML")
-		return err
-	}
-
-	var b bytes.Buffer
-	writer := justext.NewWriter(&b)
-
-	err = writer.WriteAll(paragraphSet)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed extracting content")
-		return err
-	}
-
-	content, err := html2text.FromReader(&b)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Error converting html to text")
-		return err
-	}
-
-	if content != "" {
-		bookmark.Content = content
-	}
-
-	logger.Info().Msg("Successfully fetched content")
+	logger.Info().Msg("Successfully fetched bookmark content")
 
 	return nil
 }
@@ -126,7 +85,7 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Columns("COUNT(id)")
 	query.LoadValue(&totalCount)
 
-	query.Columns("id", "created", "updated", "archived", "title", "url", "substr(content, 0, 300) AS content")
+	query.Columns("id", "created", "updated", "archived", "title", "url", "excerpt")
 	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
@@ -161,18 +120,22 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 		return errors.New("Existing bookmark")
 	}
 
-	if err := bookmark.Validate(); err != nil {
-		return err
+	if bookmark.URL == "" {
+		return errors.New("Missing Bookmark.URL")
+	}
+
+	if bookmark.Title == "" {
+		bookmark.Title = bookmark.URL
 	}
 
 	bookmark.Created = time.Now()
 	bookmark.Updated = time.Now()
 
 	query := store.db.Insert("bookmarks")
-	query.Columns("title", "created", "updated", "url", "archived", "content")
+	query.Columns("title", "created", "updated", "url", "archived", "content", "excerpt")
 	query.Record(bookmark)
 
-	l := log.With().Int64("id", bookmark.ID).Str("title", bookmark.Title).Str("url", bookmark.URL).Logger()
+	l := log.With().Int64("id", bookmark.ID).Str("url", bookmark.URL).Logger()
 
 	if _, err := query.Exec(); err != nil {
 		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
@@ -187,8 +150,6 @@ func (store *Store) AddBookmark(bookmark *Bookmark) error {
 
 	l.Info().Msg("Persisted bookmark")
 
-	// TODO move this: WorkQueue <- WorkRequest{Type: "Bookmark.FetchContent", Bookmark: *bookmark}
-
 	return nil
 }
 
@@ -198,8 +159,8 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 		return errors.New("Not an existing bookmark")
 	}
 
-	if err := bookmark.Validate(); err != nil {
-		return err
+	if bookmark.URL == "" {
+		return errors.New("Missing Bookmark.URL")
 	}
 
 	bookmark.Updated = time.Now()
@@ -208,6 +169,7 @@ func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
 	query.Set("updated", bookmark.Updated)
 	query.Set("title", bookmark.Title)
 	query.Set("url", bookmark.URL)
+	query.Set("excerpt", bookmark.Excerpt)
 	query.Set("content", bookmark.Content)
 	query.Set("archived", bookmark.Archived)
 	query.Where("id = ?", bookmark.ID)

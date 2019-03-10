@@ -41,8 +41,8 @@ func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
 	bookmarks, totalCount := api.store.ListBookmarks(&storage.ListBookmarksOptions{
 		Search:      r.URL.Query().Get("q"),
 		ReadItLater: (r.URL.Query().Get("readitlater") == "true"),
-		Limit:       50, // TODO allow client to set this
-		Offset:      0,  // TODO allow client to set this
+		Limit:       asInt(query.Get("_limit"), 50),
+		Offset:      asInt(query.Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
@@ -66,14 +66,13 @@ func (api *bookmarks) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
+	api.queue.Schedule("Bookmark.Fetch", bookmark.ID)
 
 	jsonResponse(w, 200, &bookmark)
 }
 
 func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
 	bookmark := storage.Bookmark{
-		Title:    r.URL.Query().Get("title"),
 		URL:      r.URL.Query().Get("url"),
 		Archived: false,
 	}
@@ -83,7 +82,7 @@ func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.queue.Schedule("Bookmark.FetchContent", bookmark.ID)
+	api.queue.Schedule("Bookmark.Fetch", bookmark.ID)
 
 	http.Redirect(w, r, bookmark.URL, 302)
 }

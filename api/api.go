@@ -5,6 +5,7 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,4 +88,15 @@ func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=604800") // 1 week
 	w.WriteHeader(200)
 	w.Write(asset)
+}
+
+func asInt(value string, defaults int) int {
+	if value == "" {
+		return defaults
+	}
+	val, err := strconv.Atoi(value)
+	if err != nil {
+		return defaults
+	}
+	return val
 }

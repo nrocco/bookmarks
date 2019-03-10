@@ -15,7 +15,7 @@
         <span> - </span>
         <a @click.prevent="onRemoveClicked(bookmark)" class="has-text-danger">Remove</a>
       </p>
-      <p class="content">{{ bookmark.Content }}&#8230;</p>
+      <p class="content">{{ bookmark.Excerpt }}&#8230;</p>
     </div>
   </div>
 </template>

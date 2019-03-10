@@ -39,8 +39,8 @@ func (api feeds) Routes() chi.Router {
 func (api *feeds) list(w http.ResponseWriter, r *http.Request) {
 	feeds, totalCount := api.store.ListFeeds(&storage.ListFeedsOptions{
 		Search: r.URL.Query().Get("q"),
-		Limit:  50, // TODO allow client to set this
-		Offset: 0,  // TODO allow client to set this
+		Limit:  asInt(query.Get("_limit"), 50),
+		Offset: asInt(query.Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
@@ -64,7 +64,7 @@ func (api *feeds) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.queue.Schedule("Feed.Refresh", feed.ID)
+	api.queue.Schedule("Feed.Fetch", feed.ID)
 
 	jsonResponse(w, 200, &feed)
 }
@@ -92,7 +92,7 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 func (api *feeds) refresh(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	api.queue.Schedule("Feed.Refresh", feed.ID)
+	api.queue.Schedule("Feed.Fetch", feed.ID)
 
 	jsonResponse(w, 204, nil)
 }

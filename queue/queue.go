@@ -78,7 +78,7 @@ func (w *worker) Start() {
 			case work := <-w.work:
 				logger := log.With().Int("worker_id", w.ID).Int64("work_id", work.ID).Str("work_type", work.Type).Logger()
 
-				if work.Type == "Bookmark.FetchContent" {
+				if work.Type == "Bookmark.Fetch" {
 					bookmark := storage.Bookmark{ID: work.ID}
 					if err := w.store.GetBookmark(&bookmark); err != nil {
 						logger.Warn().Err(err).Msg("Error loading bookmark")
@@ -87,7 +87,7 @@ func (w *worker) Start() {
 
 					logger := logger.With().Str("bookmark_url", bookmark.URL).Logger()
 
-					if err := bookmark.FetchContent(); err != nil {
+					if err := bookmark.Fetch(); err != nil {
 						logger.Warn().Err(err).Msg("Error fetching content")
 						return
 					}
@@ -98,7 +98,7 @@ func (w *worker) Start() {
 					}
 
 					logger.Info().Msg("Content for bookmark fetched")
-				} else if work.Type == "Feed.Refresh" {
+				} else if work.Type == "Feed.Fetch" {
 					feed := storage.Feed{ID: work.ID}
 					if err := w.store.GetFeed(&feed); err != nil {
 						logger.Warn().Err(err).Msg("Error loading feed")
