@@ -18,12 +18,11 @@ func New(store *storage.Store, queue *queue.Queue, interval int) {
 			go func() {
 				notRefreshedSince := time.Now().Add(-1 * time.Hour)
 
-				log.Info().
-					Time("not_refreshed_since", notRefreshedSince).
-					Msg("Checking for unfresh feeds")
+				log.Info().Time("not_refreshed_since", notRefreshedSince).Msg("Checking for unfresh feeds")
 
 				feeds, _ := store.ListFeeds(&storage.ListFeedsOptions{
 					NotRefreshedSince: notRefreshedSince,
+					Limit:             100,
 				})
 
 				if len(*feeds) == 0 {

@@ -167,8 +167,6 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 	query.Columns("COUNT(f.id)")
 	query.LoadValue(&totalCount)
 
-	// select f.*, count(i.id) items from feeds f left join items i on i.feed_id = f.id group by f.id;
-
 	query.Join("LEFT JOIN items i ON i.feed_id = f.id")
 	query.GroupBy("f.id")
 
