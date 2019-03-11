@@ -259,6 +259,7 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query.Set("last_authored", feed.LastAuthored)
 	query.Set("title", feed.Title)
 	query.Set("url", feed.URL)
+	query.Set("etag", feed.ETag)
 	query.Where("id = ?", feed.ID)
 
 	if _, err := query.Exec(); err != nil {

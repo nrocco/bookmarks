@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS feeds (
 	refreshed DATE DEFAULT (datetime('now')),
 	last_authored DATE DEFAULT (datetime('now')),
 	title VARCHAR(64) NOT NULL,
-	url VARCHAR(255) UNIQUE NOT NULL
+	url VARCHAR(255) UNIQUE NOT NULL,
+	etag VARCHAR(200) NULL
 );
 
 CREATE TABLE IF NOT EXISTS items (
