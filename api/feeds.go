@@ -39,8 +39,8 @@ func (api feeds) Routes() chi.Router {
 func (api *feeds) list(w http.ResponseWriter, r *http.Request) {
 	feeds, totalCount := api.store.ListFeeds(&storage.ListFeedsOptions{
 		Search: r.URL.Query().Get("q"),
-		Limit:  asInt(query.Get("_limit"), 50),
-		Offset: asInt(query.Get("_offset"), 0),
+		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
+		Offset: asInt(r.URL.Query().Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))

@@ -37,8 +37,8 @@ func (api *items) list(w http.ResponseWriter, r *http.Request) {
 	items, totalCount := api.store.ListFeedItems(&storage.ListFeedItemsOptions{
 		Search: r.URL.Query().Get("q"),
 		FeedID: r.URL.Query().Get("feed"),
-		Limit:  asInt(query.Get("_limit"), 100),
-		Offset: asInt(query.Get("_offset"), 0),
+		Limit:  asInt(r.URL.Query().Get("_limit"), 100),
+		Offset: asInt(r.URL.Query().Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))

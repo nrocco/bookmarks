@@ -41,8 +41,8 @@ func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
 	bookmarks, totalCount := api.store.ListBookmarks(&storage.ListBookmarksOptions{
 		Search:      r.URL.Query().Get("q"),
 		ReadItLater: (r.URL.Query().Get("readitlater") == "true"),
-		Limit:       asInt(query.Get("_limit"), 50),
-		Offset:      asInt(query.Get("_offset"), 0),
+		Limit:       asInt(r.URL.Query().Get("_limit"), 50),
+		Offset:      asInt(r.URL.Query().Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
