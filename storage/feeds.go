@@ -31,7 +31,7 @@ type Feed struct {
 	LastAuthored time.Time
 	Title        string
 	URL          string
-	ETag         string
+	Etag         string
 	Archived     bool
 	Items        int
 }
@@ -67,9 +67,9 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	request, _ := http.NewRequest("GET", feed.URL, nil)
 	request.Header.Set("User-Agent", defaultUserAgent)
 
-	if feed.ETag != "" {
-		request.Header.Set("If-None-Match", feed.ETag)
-		logger.Info().Str("if-none-match", feed.ETag).Msg("Conditional GET")
+	if feed.Etag != "" {
+		request.Header.Set("If-None-Match", feed.Etag)
+		logger.Info().Str("if-none-match", feed.Etag).Msg("Conditional GET")
 	} else if !feed.Refreshed.IsZero() {
 		modifiedSince := feed.Refreshed.UTC().Format(time.RFC1123)
 		request.Header.Set("If-Modified-Since", modifiedSince)
@@ -132,7 +132,7 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	}
 
 	feed.LastAuthored = *parsedFeed.UpdatedParsed
-	feed.ETag = response.Header.Get("ETag")
+	feed.Etag = response.Header.Get("Etag")
 	feed.Refreshed = time.Now()
 
 	if feed.Title == "" {
@@ -259,7 +259,7 @@ func (store *Store) UpdateFeed(feed *Feed) error {
 	query.Set("last_authored", feed.LastAuthored)
 	query.Set("title", feed.Title)
 	query.Set("url", feed.URL)
-	query.Set("etag", feed.ETag)
+	query.Set("etag", feed.Etag)
 	query.Where("id = ?", feed.ID)
 
 	if _, err := query.Exec(); err != nil {

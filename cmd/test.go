@@ -37,7 +37,7 @@ var testFetchFeedCmd = &cobra.Command{
 		feed := storage.Feed{
 			URL: args[0],
 			// Refreshed: time.Now().Add(-7 * time.Hour),
-			// ETag:      os.Args[2],
+			// Etag:      os.Args[2],
 		}
 		feedItems := []*storage.FeedItem{}
 
@@ -49,7 +49,7 @@ var testFetchFeedCmd = &cobra.Command{
 		fmt.Printf("Feed:\n")
 		fmt.Printf("  Title: %s\n", feed.Title)
 		fmt.Printf("  URL: %s\n", feed.URL)
-		fmt.Printf("  ETag: %s\n", feed.ETag)
+		fmt.Printf("  Etag: %s\n", feed.Etag)
 		fmt.Printf("  Refreshed: %v\n", feed.Refreshed)
 		fmt.Printf("  LastAuthored: %v\n", feed.LastAuthored)
 		fmt.Printf("  Items:\n")

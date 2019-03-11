@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 	updated DATE DEFAULT (datetime('now')),
 	title VARCHAR(64) NOT NULL,
 	url VARCHAR(255) UNIQUE NOT NULL,
-	excerpt TEXT NOT NULL,
+	excerpt TEXT NOT NULL DEFAULT '',
 	content TEXT NOT NULL,
 	archived BOOLEAN NOT NULL DEFAULT 0
 );
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS feeds (
 	last_authored DATE DEFAULT (datetime('now')),
 	title VARCHAR(64) NOT NULL,
 	url VARCHAR(255) UNIQUE NOT NULL,
-	etag VARCHAR(200) NULL
+	etag VARCHAR(200) NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS items (
