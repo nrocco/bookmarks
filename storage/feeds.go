@@ -131,7 +131,10 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 		*feedItems = append(*feedItems, feedItem)
 	}
 
-	feed.LastAuthored = *parsedFeed.UpdatedParsed
+	if parsedFeed.Updated != "" {
+		feed.LastAuthored = *parsedFeed.UpdatedParsed
+	}
+
 	feed.Etag = response.Header.Get("Etag")
 	feed.Refreshed = time.Now()
 
