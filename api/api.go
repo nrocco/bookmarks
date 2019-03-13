@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/storage"
 	"github.com/rs/zerolog/log"
 )
@@ -19,7 +18,7 @@ import (
 //go:generate go-bindata -pkg api -o bindata.go -prefix ../web/dist ../web/dist/...
 
 // New returns a new instance of API
-func New(store *storage.Store, queue *queue.Queue, auth bool) *API {
+func New(store *storage.Store, auth bool) *API {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -32,9 +31,9 @@ func New(store *storage.Store, queue *queue.Queue, auth bool) *API {
 		if auth {
 			r.Use(authenticator(store))
 		}
-		r.Mount("/bookmarks", bookmarks{store, queue}.Routes())
-		r.Mount("/feeds", feeds{store, queue}.Routes())
-		r.Mount("/items", items{store, queue}.Routes())
+		r.Mount("/bookmarks", bookmarks{store}.Routes())
+		r.Mount("/feeds", feeds{store}.Routes())
+		r.Mount("/items", items{store}.Routes())
 	})
 
 	r.Get("/*", bindataAssetHandler)

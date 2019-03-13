@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
-	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/storage"
 )
 
@@ -18,7 +17,6 @@ var (
 
 type feeds struct {
 	store *storage.Store
-	queue *queue.Queue
 }
 
 func (api feeds) Routes() chi.Router {
@@ -64,7 +62,10 @@ func (api *feeds) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.queue.Schedule("Feed.Fetch", feed.ID)
+	if err := api.store.RefreshFeed(&feed); err != nil {
+		jsonError(w, err, 500)
+		return
+	}
 
 	jsonResponse(w, 200, &feed)
 }
@@ -92,7 +93,10 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 func (api *feeds) refresh(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	api.queue.Schedule("Feed.Fetch", feed.ID)
+	if err := api.store.RefreshFeed(feed); err != nil {
+		jsonError(w, err, 500)
+		return
+	}
 
 	jsonResponse(w, 204, nil)
 }

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/nrocco/bookmarks/api"
-	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/scheduler"
 	"github.com/nrocco/bookmarks/storage"
 	"github.com/rs/zerolog/log"
@@ -16,7 +15,6 @@ var serverCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Info().
 			Bool("debug", viper.GetBool("debug")).
-			Int("workers", viper.GetInt("workers")).
 			Int("interval", viper.GetInt("interval")).
 			Str("listen", viper.GetString("listen")).
 			Str("storage", viper.GetString("storage")).
@@ -28,15 +26,12 @@ var serverCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("Could not open the database")
 		}
 
-		// Setup the async job queue
-		queue := queue.New(store, viper.GetInt("workers"))
-
 		// Setup the http server
-		api := api.New(store, queue, !viper.GetBool("noauth"))
+		api := api.New(store, !viper.GetBool("noauth"))
 
 		if viper.GetInt("interval") != 0 {
 			// Setup the periodic scheduler
-			scheduler.New(store, queue, viper.GetInt("interval"))
+			scheduler.New(store, viper.GetInt("interval"))
 		} else {
 			log.Info().Msg("Scheduler is disabled")
 		}
@@ -53,12 +48,10 @@ var serverCmd = &cobra.Command{
 }
 
 func init() {
-	serverCmd.PersistentFlags().IntP("workers", "w", 4, "The number of workers to start")
 	serverCmd.PersistentFlags().StringP("listen", "l", "0.0.0.0:3000", "Address to listen for HTTP requests on")
 	serverCmd.PersistentFlags().IntP("interval", "i", 15, "Fetch new feeds with this interval in minutes (0 to disable)")
 	serverCmd.PersistentFlags().BoolP("noauth", "n", false, "Disable authentication")
 
-	viper.BindPFlag("workers", serverCmd.PersistentFlags().Lookup("workers"))
 	viper.BindPFlag("listen", serverCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("interval", serverCmd.PersistentFlags().Lookup("interval"))
 	viper.BindPFlag("noauth", serverCmd.PersistentFlags().Lookup("noauth"))

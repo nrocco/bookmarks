@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
-	"github.com/nrocco/bookmarks/queue"
 	"github.com/nrocco/bookmarks/storage"
 )
 
@@ -17,7 +16,6 @@ var (
 
 type items struct {
 	store *storage.Store
-	queue *queue.Queue
 }
 
 func (api items) Routes() chi.Router {
@@ -71,6 +69,11 @@ func (api *items) readitlater(w http.ResponseWriter, r *http.Request) {
 
 	bookmark := item.ToBookmark()
 
+	if err := bookmark.Fetch(); err != nil {
+		jsonError(w, err, 500)
+		return
+	}
+
 	if err := api.store.AddBookmark(bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
@@ -80,8 +83,6 @@ func (api *items) readitlater(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, err, 500)
 		return
 	}
-
-	api.queue.Schedule("Bookmark.Fetch", bookmark.ID)
 
 	jsonResponse(w, 204, nil)
 }
