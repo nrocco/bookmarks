@@ -55,25 +55,19 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 		return ErrNoFeedURL
 	}
 
-	logger := log.With().Str("url", feed.URL).Logger()
-
-	if feed.ID != 0 {
-		logger = logger.With().Int64("id", feed.ID).Logger()
-	}
-
-	logger.Info().Msg("Fetching feed items")
-
 	client := &http.Client{}
 	request, _ := http.NewRequest("GET", feed.URL, nil)
 	request.Header.Set("User-Agent", defaultUserAgent)
 
+	logger := log.With().Str("url", feed.URL).Logger()
+
 	if feed.Etag != "" {
 		request.Header.Set("If-None-Match", feed.Etag)
-		logger.Info().Str("if-none-match", feed.Etag).Msg("Conditional GET")
+		logger = logger.With().Str("If-None-Match", feed.Etag).Logger()
 	} else if !feed.Refreshed.IsZero() {
 		modifiedSince := feed.Refreshed.UTC().Format(time.RFC1123)
 		request.Header.Set("If-Modified-Since", modifiedSince)
-		logger.Info().Str("if-modified-since", modifiedSince).Msg("Conditional GET")
+		logger = logger.With().Str("If-Modified-Since", modifiedSince).Logger()
 	}
 
 	response, err := client.Do(request)
@@ -85,7 +79,6 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	logger.Info().Int("status_code", response.StatusCode).Msg("Successfully fetched feed")
 
 	if 304 == response.StatusCode {
-		logger.Info().Msg("Feed not updated since the last time we checked")
 		return nil
 	}
 
@@ -224,7 +217,7 @@ func (store *Store) AddFeed(feed *Feed) error {
 	query.Columns("created", "updated", "refreshed", "title", "url")
 	query.Record(feed)
 
-	logger := log.With().Int64("id", feed.ID).Str("title", feed.Title).Str("url", feed.URL).Logger()
+	logger := log.With().Str("title", feed.Title).Str("url", feed.URL).Logger()
 
 	if _, err := query.Exec(); err != nil {
 		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
@@ -299,7 +292,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 		return ErrNotExistingFeed
 	}
 
-	logger := log.With().Int64("id", feed.ID).Str("url", feed.URL).Logger()
+	logger := log.With().Str("url", feed.URL).Logger()
 
 	feedItems := []*FeedItem{}
 	if err := feed.Fetch(&feedItems); err != nil {
@@ -313,7 +306,7 @@ func (store *Store) RefreshFeed(feed *Feed) error {
 			continue
 		}
 
-		logger.Info().Msg("Persisted feed item")
+		logger.Info().Str("feed_item_title", item.Title).Msg("Persisted feed item")
 	}
 
 	if err := store.UpdateFeed(feed); err != nil {
