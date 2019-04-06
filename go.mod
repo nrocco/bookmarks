@@ -1,10 +1,9 @@
 module github.com/nrocco/bookmarks
 
 require (
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0 // indirect
 	github.com/go-chi/chi v4.0.2+incompatible
-	github.com/go-shiori/go-readability v0.0.0-20190301125731-7e14b711edd4
+	github.com/go-shiori/go-readability v0.0.0-20190324095406-2beec02f3f1e
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
@@ -12,14 +11,17 @@ require (
 	github.com/mmcdole/gofeed v1.0.0-beta2
 	github.com/mmcdole/goxpp v0.0.0-20181012175147-0068e33feabf // indirect
 	github.com/nrocco/qb v0.0.0-20181224221623-c0184f358123
-	github.com/rs/zerolog v1.12.0
-	github.com/spf13/afero v1.2.1 // indirect
+	github.com/pelletier/go-toml v1.3.0 // indirect
+	github.com/rs/zerolog v1.13.0
+	github.com/sergi/go-diff v1.0.0 // indirect
+	github.com/sirupsen/logrus v1.4.1 // indirect
+	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/viper v1.3.1
+	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0 // indirect
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
-	golang.org/x/net v0.0.0-20190310074541-c10a0554eabf // indirect
-	golang.org/x/sys v0.0.0-20190310054646-10058d7d4faa // indirect
+	golang.org/x/crypto v0.0.0-20190404164418-38d8ce5564a5
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
+	golang.org/x/sys v0.0.0-20190405154228-4b34438f7a67 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )
