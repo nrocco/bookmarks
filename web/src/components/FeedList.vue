@@ -23,7 +23,7 @@
           <div class="dropdown-menu" id="feed-menu" role="menu">
             <div class="dropdown-content">
               <div class="dropdown-item">
-                <p><a class="url" :href="selectedFeed.URL">{{ selectedFeed.URL }}</a></p>
+                <p><a class="url" :href="selectedFeed.URL" :target="isIphone ? '_blank' : ''">{{ selectedFeed.URL }}</a></p>
               </div>
               <div class="dropdown-item">
                 <p>Last item created: <i :title="selectedFeed.LastAuthored|moment('dddd, MMMM Do YYYY, HH:mm')">{{ selectedFeed.LastAuthored|moment("from") }}</i></p>
@@ -44,7 +44,7 @@
 
     <div class="block feed-item" v-for="item in items" :key="item.ID">
       <p class="has-text-weight-bold">{{ item.Title }}</p>
-      <p class="is-size-7"><a class="url" :href="item.URL">{{ item.URL }}</a></p>
+      <p class="is-size-7"><a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a></p>
       <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}&#8230;</p>
       <p class="buttons is-right">
         <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
@@ -69,6 +69,9 @@ export default {
   }),
 
   computed: {
+    isIphone () {
+      return window.navigator.userAgent.includes('iPhone')
+    },
     selectedFeed () {
       if (!this.filters.feed) {
         return null

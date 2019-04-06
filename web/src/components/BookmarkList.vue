@@ -9,7 +9,7 @@
     <div class="block bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
       <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
       <p class="is-size-7">
-        <a class="url" :href="bookmark.URL">{{ bookmark.URL }}</a>
+        <a class="url" :href="bookmark.URL" :target="isIphone ? '_blank' : ''">{{ bookmark.URL }}</a>
         <span> - </span>
         <a @click.prevent="onToggleArchivedClicked(bookmark)" :class="{'has-text-primary': !bookmark.Archived, 'has-text-info': bookmark.Archived}">{{ bookmark.Archived ? 'Read it Later' : 'Archive' }}</a>
         <span> - </span>
@@ -32,6 +32,12 @@ export default {
     filters: {},
     bookmarks: []
   }),
+
+  computed: {
+    isIphone () {
+      return window.navigator.userAgent.includes('iPhone')
+    }
+  },
 
   methods: {
     onLoad (filters) {
