@@ -37,8 +37,10 @@ func (bookmark *Bookmark) Fetch() error {
 
 	article, err := readability.FromURL(bookmark.URL, 5*time.Second)
 	if err != nil {
-		logger.Warn().Err(err).Msg("Error fetching bookmark")
-		return err
+		bookmark.Title = bookmark.URL
+		bookmark.Content = "Error fetching bookmark"
+		bookmark.Excerpt = "Error fetching bookmark"
+		return nil
 	}
 
 	bookmark.Title = article.Title
