@@ -20,9 +20,11 @@ services:
       - "3000:3000"
     volumes:
       - "./:/src"
-      - "go_modules:/go"
+      - "go_modules_pkg:/go/pkg"
+      - "go_modules_src:/go/src"
       - "bookmarks_state:/var/lib/bookmarks"
 volumes:
   node_modules:
-  go_modules:
+  go_modules_pkg:
+  go_modules_src:
   bookmarks_state:

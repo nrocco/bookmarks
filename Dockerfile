@@ -34,8 +34,7 @@ RUN go mod download
 RUN golint ./...
 COPY . ./
 COPY --from=npmbuilder /app/dist/ ./web/dist/
-RUN go generate -v api/api.go && \
-    go generate -v storage/bookmarks.go
+RUN go generate -v api/api.go
 ARG VERSION=unknown
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
