@@ -74,6 +74,9 @@ export default {
 </script>
 
 <style scoped>
+  .hero .tabs li.is-active a {
+    color: #363636 !important; /* TODO: hack to make text of active tab visible */
+  }
   .bookmarklet {
     word-wrap: break-word;
     word-break: break-all;
