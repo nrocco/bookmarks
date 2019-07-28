@@ -56,4 +56,4 @@ COPY --from=gobuilder /src/bookmarks /usr/bin/bookmarks
 EXPOSE 3000
 WORKDIR /var/lib/bookmarks
 VOLUME /var/lib/bookmarks
-CMD ["bookmarks"]
+CMD ["bookmarks", “server”]
