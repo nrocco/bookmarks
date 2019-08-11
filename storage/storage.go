@@ -13,6 +13,9 @@ const (
 	databaseFile = "data.sqlite"
 )
 
+func qbLogger(format string, v ...interface{}) {
+}
+
 func New(path string) (*Store, error) {
 	var err error
 
@@ -21,7 +24,7 @@ func New(path string) (*Store, error) {
 		return &Store{}, err
 	}
 
-	db, err := qb.Open(filepath.Join(path, databaseFile))
+	db, err := qb.Open(filepath.Join(path, databaseFile), qbLogger)
 	if err != nil {
 		return &Store{}, err
 	}
