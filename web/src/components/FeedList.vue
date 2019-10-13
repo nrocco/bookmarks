@@ -46,10 +46,12 @@
       <p class="has-text-weight-bold">{{ item.Title }}</p>
       <p class="is-size-7"><a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a></p>
       <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}&#8230;</p>
-      <p class="buttons is-right">
-        <a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a>
-        <a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a>
-      </p>
+      <p class="buttons">
+      <div class="field is-grouped">
+        <p class="control"><a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a></p>
+        <span class="is-button-pusher" />
+        <p class="control"><a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a></p>
+      </div>
     </div>
   </div>
 </template>
@@ -141,6 +143,9 @@ export default {
   width: 100%;
 }
 .select select {
+  width: 100%;
+}
+.is-button-pusher {
   width: 100%;
 }
 </style>

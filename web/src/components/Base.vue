@@ -16,13 +16,11 @@
         </div>
       </div>
       <div class="hero-foot">
-        <nav class="tabs is-boxed is-right">
-          <div class="container">
-            <ul>
-              <li><router-link exact active-class="is-active" tag="li" to="/"><a>Bookmarks</a></router-link></li>
-              <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
-            </ul>
-          </div>
+        <nav class="tabs is-centered">
+          <ul>
+            <li><router-link exact active-class="is-active" tag="li" to="/"><a>Bookmarks</a></router-link></li>
+            <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
+          </ul>
         </nav>
       </div>
     </section>
@@ -74,9 +72,6 @@ export default {
 </script>
 
 <style scoped>
-  .hero .tabs li.is-active a {
-    color: #363636 !important; /* TODO: hack to make text of active tab visible */
-  }
   .bookmarklet {
     word-wrap: break-word;
     word-break: break-all;

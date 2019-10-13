@@ -3,28 +3,19 @@ version: "3.7"
 services:
   frontend:
     build:
-      context: ./
+      context: .
       target: npmbase
     command: ["sh", "-c", "test -f node_modules/.bin/vue-cli-service || npm install; npm run serve"]
     ports:
       - "8080:8080"
     volumes:
-      - "./web:/app/"
-      - "node_modules:/app/node_modules"
+      - "./web:/app"
   backend:
     build:
-      context: ./
+      context: .
       target: gobase
     command: ["modd", "--debug"]
     ports:
       - "3000:3000"
     volumes:
-      - "./:/src"
-      - "go_modules_pkg:/go/pkg"
-      - "go_modules_src:/go/src"
-      - "bookmarks_state:/var/lib/bookmarks"
-volumes:
-  node_modules:
-  go_modules_pkg:
-  go_modules_src:
-  bookmarks_state:
+      - ".:/src"
