@@ -3,12 +3,19 @@
     <div class="block">
       <div class="field has-addons">
         <div class="control is-expanded">
-          <div class="select">
+          <div v-if="newFeed==null" class="select">
             <select v-model="filters.feed" @change="onFilterChange">
               <option :value="undefined">All</option>
               <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }} ({{ feed.Items }})</option>
             </select>
           </div>
+          <div v-else>
+            <input class="input" type="text" v-model="newFeed" placeholder="New atom/rss feed url">
+          </div>
+        </div>
+
+        <div class="control">
+          <a class="button" :class="{'is-info':newFeed!=='', 'is-warning': newFeed===''}" @click="onAddFeedClicked">{{ newFeed!=='' ? 'Add Feed' : 'Cancel' }}</a>
         </div>
 
         <div v-if="selectedFeed" class="dropdown is-right is-pulled-right is-hoverable">
@@ -65,6 +72,7 @@ export default {
   ],
 
   data: () => ({
+    newFeed: null,
     filters: {},
     feeds: [],
     items: []
@@ -95,6 +103,19 @@ export default {
       this.$http.get(`/items`, { params: this.filters }).then(response => {
         this.items = response.data
       })
+    },
+
+    onAddFeedClicked (event) {
+      if (this.newFeed === null) {
+        this.newFeed = ''
+      } else if (this.newFeed !== '') {
+        this.$http.post(`/feeds`, {url: this.newFeed}).then(response => {
+          this.newFeed = null
+          setTimeout(() => window.location.reload(true), 2000)
+        })
+      } else {
+        this.newFeed = null
+      }
     },
 
     onFilterChange (event) {
