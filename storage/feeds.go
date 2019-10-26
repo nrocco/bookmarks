@@ -167,7 +167,8 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 	query.GroupBy("f.id")
 
 	query.Columns("f.*", "COUNT(i.id) AS items")
-	query.OrderBy("f.refreshed", "DESC")
+	query.OrderBy("COUNT(i.id)", "DESC")
+	query.OrderBy("f.last_authored", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	query.Load(&feeds)
