@@ -14,8 +14,8 @@
           </div>
         </div>
 
-        <div class="control">
-          <a class="button" :class="{'is-info':newFeed!=='', 'is-warning': newFeed===''}" @click="onAddFeedClicked">{{ newFeed!=='' ? 'Add Feed' : 'Cancel' }}</a>
+        <div class="control" v-if="!filters.feed">
+          <a class="button" :class="{'is-info':newFeed!=='', 'is-warning': newFeed===''}" @click="onAddFeedClicked">{{ newFeed!=='' ? 'New Feed' : 'Cancel' }}</a>
         </div>
 
         <div v-if="selectedFeed" class="dropdown is-right is-pulled-right is-hoverable">
