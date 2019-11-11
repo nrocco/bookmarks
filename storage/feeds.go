@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"strings"
 
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/microcosm-cc/bluemonday"
@@ -103,7 +104,7 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 			URL:     item.Link,
 		}
 
-		if strings.HasPrefix(feedItem.Title, '[Advertorial]') {
+		if strings.HasPrefix(feedItem.Title, "[Advertorial]") {
 			continue
 		}
 
