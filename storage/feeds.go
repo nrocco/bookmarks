@@ -103,6 +103,10 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 			URL:     item.Link,
 		}
 
+		if strings.HasPrefix(feedItem.Title, '[Advertorial]') {
+			continue
+		}
+
 		if feedItem.Content != "" {
 			feedItem.Content = textCleaner.Sanitize(item.Content)
 		} else {
