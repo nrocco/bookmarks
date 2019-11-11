@@ -123,6 +123,8 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 
 		if feedItem.Date.Before(feed.Refreshed) {
 			continue
+		} else if feedItem.Date.After(time.Now()) {
+			continue
 		}
 
 		*feedItems = append(*feedItems, feedItem)
