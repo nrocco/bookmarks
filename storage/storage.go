@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/nrocco/qb"
@@ -24,7 +25,7 @@ func New(path string) (*Store, error) {
 		return &Store{}, err
 	}
 
-	db, err := qb.Open(filepath.Join(path, databaseFile), qbLogger)
+	db, err := qb.Open(filepath.Join(path, fmt.Sprintf("%s?_foreign_keys=yes", databaseFile)), qbLogger)
 	if err != nil {
 		return &Store{}, err
 	}

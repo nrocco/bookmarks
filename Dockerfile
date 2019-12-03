@@ -5,9 +5,8 @@ RUN apk add --no-cache \
         git \
         musl-dev \
         sqlite
-RUN go get github.com/jteeuwen/go-bindata/... && \
-    git clone -b v0.8 https://github.com/cortesi/modd.git /go/src/github.com/cortesi/modd && \
-    go get github.com/cortesi/modd/cmd/modd && \
+RUN wget -O- https://github.com/cortesi/modd/releases/download/v0.8/modd-0.8-linux64.tgz | tar zxf - --strip-components 1 -C /usr/bin/ && \
+    go get github.com/jteeuwen/go-bindata/... && \
     go get golang.org/x/lint/golint
 WORKDIR /src
 

@@ -9,21 +9,17 @@
           </p>
         </div>
       </div>
-      <div class="hero-body">
-        <div class="container">
-          <h1 class="title">{{ title }}</h1>
-          <h2 class="subtitle">{{ subtitle }}</h2>
-        </div>
-      </div>
       <div class="hero-foot">
         <nav class="tabs is-centered">
           <ul>
             <li><router-link exact active-class="is-active" tag="li" to="/"><a>Bookmarks</a></router-link></li>
             <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
+            <li><router-link exact active-class="is-active" tag="li" to="/thoughts"><a>Thoughts</a></router-link></li>
           </ul>
         </nav>
       </div>
     </section>
+
     <section class="section">
       <div class="container">
         <router-view></router-view>

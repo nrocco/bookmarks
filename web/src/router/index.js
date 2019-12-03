@@ -6,6 +6,7 @@ import Login from '@/components/Login'
 
 import BookmarkList from '@/components/BookmarkList'
 import FeedList from '@/components/FeedList'
+import ThoughtList from '@/components/ThoughtList'
 
 Vue.use(Router)
 
@@ -38,6 +39,16 @@ export default new Router({
             title: 'Feeds',
             subtitle: 'All your rss and atom feeds',
             color: 'is-warning'
+          }
+        },
+        {
+          name: 'thoughts',
+          path: '/thoughts',
+          component: ThoughtList,
+          meta: {
+            title: 'Thoughts',
+            subtitle: 'All your thoughts',
+            color: 'is-info'
           }
         }
       ]
