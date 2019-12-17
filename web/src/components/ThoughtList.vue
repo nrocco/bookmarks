@@ -45,7 +45,8 @@ export default {
             Tags: response.headers['x-tags'].split(","),
             Content: response.data,
           })
-        }).catch((error) => {
+        }).catch(error => {
+          console.log(error)
           this.thoughts.push({
             Title: this.$route.params.title,
             Created: null,
