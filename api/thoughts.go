@@ -1,7 +1,8 @@
 package api
 
 import (
-	"io"
+	"context"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ func (api thoughts) Routes() chi.Router {
 
 	r.Get("/", api.list)
 	r.Route("/{title}", func(r chi.Router) {
+		r.Use(api.middleware)
 		r.Get("/", api.get)
 		r.Put("/", api.put)
 		r.Delete("/", api.delete)
@@ -34,7 +36,7 @@ func (api thoughts) Routes() chi.Router {
 func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
 	thoughts, totalCount := api.store.ListThoughts(&storage.ListThoughtsOptions{
 		Search: r.URL.Query().Get("q"),
-		Tags: r.URL.Query().Get("tags"),
+		Tags:   r.URL.Query().Get("tags"),
 		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
 		Offset: asInt(r.URL.Query().Get("_offset"), 0),
 	})
@@ -44,58 +46,71 @@ func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, thoughts)
 }
 
+func (api *thoughts) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		thought := storage.Thought{Title: chi.URLParam(r, "title")}
+
+		if err := api.store.GetThought(&thought); err != nil && r.Method != "PUT" {
+			w.WriteHeader(404)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), contextKeyThought, &thought)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
-	title := chi.URLParam(r, "title")
-	thought := storage.Thought{Title: title}
+	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
-	if err := api.store.GetThought(&thought); err != nil {
-		w.WriteHeader(404)
-		return
-	}
+	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
+	w.Header().Set("X-Updated", thought.Updated.Format("2006-01-02T15:04:05.0000000Z"))
+	w.Header().Set("X-Tags", strings.Join(thought.Tags, ","))
 
-	http.ServeFile(w, r, thought.Path())
+	w.WriteHeader(200)
+	w.Write([]byte(thought.Content))
 }
 
 func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
-	title := chi.URLParam(r, "title")
-	thought := storage.Thought{Title: title}
+	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
-	api.store.GetThought(&thought)
-
-	var data io.ReadCloser
-
-	if r.ContentLength != 0 {
-		defer r.Body.Close()
-		data = r.Body
-	}
-
-	tags := r.Header.Get("X-Tags")
-	if tags != "" {
+	if tags := r.Header.Get("X-Tags"); tags != "" {
 		thought.Tags = strings.Split(tags, ",")
 	}
 
-	// TODO: allow change title
+	if r.ContentLength != 0 {
+		defer r.Body.Close()
 
-	if err := api.store.PersistThought(&thought, data); err != nil {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.Header().Set("X-Error", err.Error())
+			w.WriteHeader(500)
+			return
+		}
+
+		thought.Content = string(body)
+	}
+
+	if err := api.store.PersistThought(thought); err != nil {
 		w.Header().Set("X-Error", err.Error())
-		w.WriteHeader(400)
+		w.WriteHeader(500)
 		return
 	}
 
-	w.WriteHeader(202)
+	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
+	w.Header().Set("X-Updated", thought.Updated.Format("2006-01-02T15:04:05.0000000Z"))
+	w.Header().Set("X-Tags", strings.Join(thought.Tags, ","))
+
+	w.WriteHeader(200)
+	w.Write([]byte(thought.Content))
 }
 
 func (api *thoughts) delete(w http.ResponseWriter, r *http.Request) {
-	title := chi.URLParam(r, "title")
-	thought := storage.Thought{Title: title}
+	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
-	if err := api.store.GetThought(&thought); err != nil {
-		w.WriteHeader(404)
-		return
-	}
-
-	if err := api.store.DeleteThought(&thought); err != nil {
-		w.WriteHeader(400)
+	if err := api.store.DeleteThought(thought); err != nil {
+		w.Header().Set("X-Error", err.Error())
+		w.WriteHeader(500)
 		return
 	}
 

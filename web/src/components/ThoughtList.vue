@@ -6,7 +6,7 @@
       </p>
     </div>
     <hr/>
-    <thought v-for="thought in thoughts" :thought="thought" :key="thought.ID" @saved="onThoughtSaved(thought, $event)" @removed="onThoughtRemoved" />
+    <thought v-for="thought in thoughts" :thought="thought" :key="thought.Title" @saved="onThoughtSaved(thought, $event)" @removed="onThoughtRemoved" />
   </div>
 </template>
 
@@ -36,20 +36,39 @@ export default {
       this.thoughts = []
       this.filters = filters
 
-      let params = {}
-      if (!this.filters.q) {
-        params.readitlater = 'true'
+      if (this.$route.params.title) {
+        this.$http.get(`/thoughts/${this.$route.params.title}`).then(response => {
+          this.thoughts.push({
+            Title: this.$route.params.title,
+            Created: response.headers['x-created'],
+            Updated: response.headers['x-updated'],
+            Tags: response.headers['x-tags'].split(","),
+            Content: response.data,
+          })
+        }).catch((error) => {
+          this.thoughts.push({
+            Title: this.$route.params.title,
+            Created: null,
+            Updated: null,
+            Tags: [],
+            Content: "",
+          })
+        })
       } else {
-        params.q = this.filters.q
+        let params = {}
+        if (this.filters.q) {
+          params.q = this.filters.q
+        }
+
+        this.$http.get(`/thoughts`, { params: params }).then(response => {
+          this.thoughts = response.data
+        })
       }
 
-      this.$http.get(`/thoughts`, { params: params }).then(response => {
-        this.thoughts = response.data
-      })
     },
 
     onFilterChange (event) {
-      this.changeRouteOnFilterChange(this.filters)
+      this.changeRouteOnFilterChange(this.filters, '/thoughts')
     },
 
     onThoughtSaved (oldThought, newThought) {

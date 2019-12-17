@@ -4,8 +4,11 @@
       <div class="content">
         <div class="columns">
           <div class="column is-four-fifths">
-            <h4 class="title is-4">{{ thought.Title }}</h4>
-            <p class="subtitle is-6"><i>Modified {{ thought.Updated|moment("from", "now") }}</i></p>
+            <h4 class="title is-4"><router-link :to="{name: 'thoughts',params:{title:thought.Title}}">{{ thought.Title }}</router-link></h4>
+            <p class="subtitle is-6">
+              <i v-if="thought.Updated">Modified {{ thought.Updated|moment("from", "now") }}</i>
+              <i v-else>New thought</i>
+            </p>
           </div>
 
           <div v-if="!isEditing" class="column has-text-right">
@@ -78,9 +81,6 @@
       },
 
       onCancelClicked (event) {
-        // if (!this.thought.ID) {
-        //   this.$emit('removed', this.thought)
-        // }
         this.modifiedThought = null
       },
 
@@ -103,6 +103,8 @@
             'X-Tags': this.modifiedThought.Tags.join(',')
           }
         }).then(response => {
+          this.modifiedThought.Created = response.headers['x-created']
+          this.modifiedThought.Updated = response.headers['x-updated']
           this.$emit('saved', this.modifiedThought)
         })
       },
@@ -114,6 +116,8 @@
             'X-Tags': this.modifiedThought.Tags.join(',')
           }
         }).then(response => {
+          this.modifiedThought.Created = response.headers['x-created']
+          this.modifiedThought.Updated = response.headers['x-updated']
           this.$emit('saved', this.modifiedThought)
         })
       },

@@ -43,7 +43,7 @@ export default new Router({
         },
         {
           name: 'thoughts',
-          path: '/thoughts',
+          path: '/thoughts/:title?',
           component: ThoughtList,
           meta: {
             title: 'Thoughts',

@@ -9,8 +9,8 @@ export default {
   },
 
   methods: {
-    changeRouteOnFilterChange (filters) {
-      this.$router.push({ query: sanitiseFilters(filters) })
+    changeRouteOnFilterChange (filters, path) {
+      this.$router.push({ path: path, query: sanitiseFilters(filters) })
     }
   }
 }
