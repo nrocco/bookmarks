@@ -5,23 +5,23 @@ RUN apk add --no-cache \
         git \
         musl-dev \
         sqlite
-RUN wget -O- https://github.com/cortesi/modd/releases/download/v0.8/modd-0.8-linux64.tgz | tar zxf - --strip-components 1 -C /usr/bin/ && \
-    go get github.com/jteeuwen/go-bindata/... && \
-    go get golang.org/x/lint/golint
+RUN env GO111MODULE=on go get -u github.com/cortesi/modd/cmd/modd
+RUN go get -u github.com/kevinburke/go-bindata/...
+RUN go get -u golang.org/x/lint/golint
 WORKDIR /src
 
 
 
 FROM node:alpine AS npmbase
-WORKDIR /app
+WORKDIR /src
 
 
 
 FROM npmbase AS npmbuilder
-WORKDIR /app
-COPY web/package*.json /app/
+WORKDIR /src
+COPY web/package*.json /src/
 RUN npm install --no-progress
-COPY web/ /app/
+COPY web/ /src/
 RUN npm run lint --no-progress
 RUN npm run build --production --no-progress
 
@@ -33,7 +33,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 RUN golint ./...
 COPY . ./
-COPY --from=npmbuilder /app/dist/ ./web/dist/
+COPY --from=npmbuilder /src/dist/ ./web/dist/
 RUN go generate -v api/api.go
 ARG VERSION=unknown
 ARG COMMIT=unknown
