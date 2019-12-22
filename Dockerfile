@@ -32,14 +32,14 @@ FROM gobase AS gobuilder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-RUN go vet ./...
-RUN golint ./...
 COPY . ./
 COPY --from=nodebuilder /src/dist/ ./web/dist/
 RUN go generate -v api/api.go
 ARG VERSION=unknown
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
+RUN go vet ./...
+RUN golint ./...
 RUN go build -v -o bookmarks \
         --tags "fts5" \
         -ldflags "\
