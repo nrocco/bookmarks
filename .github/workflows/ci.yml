@@ -34,8 +34,9 @@ jobs:
 
       - name: Go Lint
         run: |
+          export PATH=/home/runner/go/bin:$PATH
           go vet ./...
-          echo golint ./...
+          golint ./...
 
       - name: Node Build
         working-directory: web
@@ -43,6 +44,7 @@ jobs:
 
       - name: Go Build
         run: |
+          export PATH=/home/runner/go/bin:$PATH
           go generate -v api/api.go
           go build -v -o bookmarks --tags "fts5"
 
