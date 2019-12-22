@@ -45,3 +45,29 @@ jobs:
         run: |
           go generate -v api/api.go
           go build -v -o bookmarks --tags "fts5"
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v1
+
+      - name: Docker Build
+        run: |
+          docker build \
+            --build-arg "VERSION=$(git describe --tags)" \
+            --build-arg "COMMIT=$(git describe --always)" \
+            --build-arg "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --tag "${{ github.repository }}:$(git describe --tags)" \
+            --tag "${{ github.repository }}:latest" \
+            .
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login --username ${{ github.actor }} --password-stdin
+
+      - name: Docker Push
+        run: |
+          docker push "${{ github.repository }}:$(git describe --tags)"
+          docker push "${{ github.repository }}:latest"
