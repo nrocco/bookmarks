@@ -109,7 +109,7 @@ export default {
       if (this.newFeed === null) {
         this.newFeed = ''
       } else if (this.newFeed !== '') {
-        this.$http.post(`/feeds`, {url: this.newFeed}).then(response => {
+        this.$http.post(`/feeds`, { url: this.newFeed }).then(response => {
           this.newFeed = null
           setTimeout(() => window.location.reload(true), 2000)
         })

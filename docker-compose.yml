@@ -4,8 +4,8 @@ services:
   frontend:
     build:
       context: .
-      target: npmbase
-    command: ["sh", "-c", "test -f node_modules/.bin/vue-cli-service || npm install; npm run serve"]
+      target: nodebase
+    command: ["sh", "-c", "test -f node_modules/.bin/vue-cli-service || yarn install; yarn run serve"]
     ports:
       - "8080:8080"
     volumes:

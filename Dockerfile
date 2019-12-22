@@ -12,18 +12,19 @@ WORKDIR /src
 
 
 
-FROM node:alpine AS npmbase
+FROM node:alpine AS nodebase
+RUN npm install -g @vue/cli
 WORKDIR /src
 
 
 
-FROM npmbase AS npmbuilder
+FROM nodebase AS nodebuilder
 WORKDIR /src
 COPY web/package*.json /src/
-RUN npm install --no-progress
+RUN yarn install --no-progress
 COPY web/ /src/
-RUN npm run lint --no-progress
-RUN npm run build --production --no-progress
+RUN yarn run lint --no-progress
+RUN yarn run build --no-progress --production
 
 
 
@@ -31,9 +32,10 @@ FROM gobase AS gobuilder
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go vet ./...
 RUN golint ./...
 COPY . ./
-COPY --from=npmbuilder /src/dist/ ./web/dist/
+COPY --from=nodebuilder /src/dist/ ./web/dist/
 RUN go generate -v api/api.go
 ARG VERSION=unknown
 ARG COMMIT=unknown

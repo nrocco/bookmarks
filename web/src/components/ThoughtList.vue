@@ -42,8 +42,8 @@ export default {
             Title: this.$route.params.title,
             Created: response.headers['x-created'],
             Updated: response.headers['x-updated'],
-            Tags: response.headers['x-tags'].split(","),
-            Content: response.data,
+            Tags: response.headers['x-tags'].split(','),
+            Content: response.data
           })
         }).catch(error => {
           console.log(error)
@@ -52,7 +52,7 @@ export default {
             Created: null,
             Updated: null,
             Tags: [],
-            Content: "",
+            Content: ''
           })
         })
       } else {
@@ -65,7 +65,6 @@ export default {
           this.thoughts = response.data
         })
       }
-
     },
 
     onFilterChange (event) {

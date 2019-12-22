@@ -55,83 +55,83 @@
 </template>
 
 <script>
-  import _ from 'lodash'
+import _ from 'lodash'
 
-  export default {
-    props: {
-      thought: {
-        type: [Object],
-        default: () => ({})
-      }
+export default {
+  props: {
+    thought: {
+      type: [Object],
+      default: () => ({})
+    }
+  },
+
+  data: () => ({
+    modifiedThought: null
+  }),
+
+  computed: {
+    isEditing () {
+      return this.modifiedThought !== null
+    }
+  },
+
+  methods: {
+    onEditClicked (event) {
+      this.modifiedThought = JSON.parse(JSON.stringify(this.thought))
     },
 
-    data: () => ({
-      modifiedThought: null
-    }),
-
-    computed: {
-      isEditing () {
-        return this.modifiedThought !== null
-      },
+    onCancelClicked (event) {
+      this.modifiedThought = null
     },
 
-    methods: {
-      onEditClicked (event) {
-        this.modifiedThought = JSON.parse(JSON.stringify(this.thought))
-      },
+    onContentChanged: _.debounce(function () {
+      this.$http.put(`/thoughts/${this.thought.Title}`, this.modifiedThought.Content).then(response => {
+        this.$emit('saved', this.modifiedThought)
+      })
+    }, 1000),
 
-      onCancelClicked (event) {
-        this.modifiedThought = null
-      },
+    onSaveClicked (event) {
+      this.modifiedThought = null
+    },
 
-      onContentChanged: _.debounce(function () {
-        this.$http.put(`/thoughts/${this.thought.Title}`, this.modifiedThought.Content).then(response => {
-          this.$emit('saved', this.modifiedThought)
-        })
-      }, 1000),
+    onTagAdded (event) {
+      this.modifiedThought.Tags.push(event.target.value)
+      event.target.value = ''
 
-      onSaveClicked (event) {
-        this.modifiedThought = null
-      },
-
-      onTagAdded (event) {
-        this.modifiedThought.Tags.push(event.target.value)
-        event.target.value = ""
-
-        this.$http.put(`/thoughts/${this.thought.Title}`, null, {
-          headers: {
-            'X-Tags': this.modifiedThought.Tags.join(',')
-          }
-        }).then(response => {
-          this.modifiedThought.Created = response.headers['x-created']
-          this.modifiedThought.Updated = response.headers['x-updated']
-          this.$emit('saved', this.modifiedThought)
-        })
-      },
-
-      onRemoveTag (tag) {
-        this.modifiedThought.Tags.splice(this.modifiedThought.Tags.indexOf(tag), 1)
-        this.$http.put(`/thoughts/${this.thought.Title}`, null, {
-          headers: {
-            'X-Tags': this.modifiedThought.Tags.join(',')
-          }
-        }).then(response => {
-          this.modifiedThought.Created = response.headers['x-created']
-          this.modifiedThought.Updated = response.headers['x-updated']
-          this.$emit('saved', this.modifiedThought)
-        })
-      },
-
-      onRemoveClicked (thought) {
-        if (!confirm('Are you sure?')) {
-          return false
+      this.$http.put(`/thoughts/${this.thought.Title}`, null, {
+        headers: {
+          'X-Tags': this.modifiedThought.Tags.join(',')
         }
-        this.$http.delete(`/thoughts/${this.thought.Title}`).then(response => {
-          this.$emit('removed', this.thought)
-        })
+      }).then(response => {
+        this.modifiedThought.Created = response.headers['x-created']
+        this.modifiedThought.Updated = response.headers['x-updated']
+        this.$emit('saved', this.modifiedThought)
+      })
+    },
+
+    onRemoveTag (tag) {
+      this.modifiedThought.Tags.splice(this.modifiedThought.Tags.indexOf(tag), 1)
+      this.$http.put(`/thoughts/${this.thought.Title}`, null, {
+        headers: {
+          'X-Tags': this.modifiedThought.Tags.join(',')
+        }
+      }).then(response => {
+        this.modifiedThought.Created = response.headers['x-created']
+        this.modifiedThought.Updated = response.headers['x-updated']
+        this.$emit('saved', this.modifiedThought)
+      })
+    },
+
+    onRemoveClicked (thought) {
+      if (!confirm('Are you sure?')) {
+        return false
       }
+      this.$http.delete(`/thoughts/${this.thought.Title}`).then(response => {
+        this.$emit('removed', this.thought)
+      })
     }
   }
+}
 </script>
 
 <style>
