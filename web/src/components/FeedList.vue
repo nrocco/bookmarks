@@ -105,11 +105,11 @@ export default {
       })
     },
 
-    onAddFeedClicked (event) {
+    onAddFeedClicked () {
       if (this.newFeed === null) {
         this.newFeed = ''
       } else if (this.newFeed !== '') {
-        this.$http.post(`/feeds`, { url: this.newFeed }).then(response => {
+        this.$http.post(`/feeds`, { url: this.newFeed }).then(() => {
           this.newFeed = null
           setTimeout(() => window.location.reload(true), 2000)
         })
@@ -118,30 +118,30 @@ export default {
       }
     },
 
-    onFilterChange (event) {
+    onFilterChange () {
       this.changeRouteOnFilterChange(this.filters)
     },
 
     onReadItLaterClicked (item) {
-      this.$http.post(`/items/${item.ID}/readitlater`).then(response => {
+      this.$http.post(`/items/${item.ID}/readitlater`).then(() => {
         this.items.splice(this.items.indexOf(item), 1)
       })
     },
 
     onRemoveClicked (item) {
-      this.$http.delete(`/items/${item.ID}`).then(response => {
+      this.$http.delete(`/items/${item.ID}`).then(() => {
         this.items.splice(this.items.indexOf(item), 1)
       })
     },
 
     onRefreshFeedClicked (feed) {
-      this.$http.post(`/feeds/${feed.ID}/refresh`).then(response => {
+      this.$http.post(`/feeds/${feed.ID}/refresh`).then(() => {
         setTimeout(() => window.location.reload(true), 2000)
       })
     },
 
     onDeleteFeedClicked (feed) {
-      this.$http.delete(`/feeds/${feed.ID}`).then(response => {
+      this.$http.delete(`/feeds/${feed.ID}`).then(() => {
         this.changeRouteOnFilterChange({})
       })
     }

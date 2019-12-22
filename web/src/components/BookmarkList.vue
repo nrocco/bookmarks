@@ -56,18 +56,18 @@ export default {
       })
     },
 
-    onFilterChange (event) {
+    onFilterChange () {
       this.changeRouteOnFilterChange(this.filters)
     },
 
     onToggleArchivedClicked (bookmark) {
-      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Archived: !bookmark.Archived }).then(response => {
+      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Archived: !bookmark.Archived }).then(() => {
         this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     },
 
     onRemoveClicked (bookmark) {
-      this.$http.delete(`/bookmarks/${bookmark.ID}`).then(response => {
+      this.$http.delete(`/bookmarks/${bookmark.ID}`).then(() => {
         this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
       })
     }

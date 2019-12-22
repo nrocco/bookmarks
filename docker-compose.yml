@@ -5,7 +5,7 @@ services:
     build:
       context: .
       target: nodebase
-    command: ["sh", "-c", "test -f node_modules/.bin/vue-cli-service || yarn install; yarn run serve"]
+    command: ["sh", "-c", "yarn install && yarn run serve"]
     ports:
       - "8080:8080"
     volumes:

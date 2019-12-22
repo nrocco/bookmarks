@@ -58,8 +58,8 @@ export default {
     isBookmarkletModalActive: false
   }),
   methods: {
-    onLogoutClicked (event) {
-      this.$http.delete('/token').then(response => {
+    onLogoutClicked () {
+      this.$http.delete('/token').then(() => {
         this.$router.push({ name: 'login' })
       })
     }

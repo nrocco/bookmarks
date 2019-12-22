@@ -20,7 +20,7 @@
             </a>
           </div>
           <div v-else class="column has-text-right">
-            <a @click="onRemoveClicked(thought)" class="button is-white">
+            <a @click="onRemoveClicked" class="button is-white">
               <i class="fas fa-trash" aria-hidden="true"></i>
             </a>
             <a @click="onCancelClicked" class="button is-white">
@@ -76,21 +76,21 @@ export default {
   },
 
   methods: {
-    onEditClicked (event) {
+    onEditClicked () {
       this.modifiedThought = JSON.parse(JSON.stringify(this.thought))
     },
 
-    onCancelClicked (event) {
+    onCancelClicked () {
       this.modifiedThought = null
     },
 
     onContentChanged: _.debounce(function () {
-      this.$http.put(`/thoughts/${this.thought.Title}`, this.modifiedThought.Content).then(response => {
+      this.$http.put(`/thoughts/${this.thought.Title}`, this.modifiedThought.Content).then(() => {
         this.$emit('saved', this.modifiedThought)
       })
     }, 1000),
 
-    onSaveClicked (event) {
+    onSaveClicked () {
       this.modifiedThought = null
     },
 
@@ -122,11 +122,11 @@ export default {
       })
     },
 
-    onRemoveClicked (thought) {
+    onRemoveClicked () {
       if (!confirm('Are you sure?')) {
         return false
       }
-      this.$http.delete(`/thoughts/${this.thought.Title}`).then(response => {
+      this.$http.delete(`/thoughts/${this.thought.Title}`).then(() => {
         this.$emit('removed', this.thought)
       })
     }
