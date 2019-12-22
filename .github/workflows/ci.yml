@@ -9,6 +9,8 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.13
+
+      - name: Setup Go Build Tools
         run: |
           go get -u github.com/kevinburke/go-bindata/...
           go get -u golang.org/x/lint/golint
