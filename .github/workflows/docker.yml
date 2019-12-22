@@ -1,0 +1,29 @@
+name: Continious Integration
+on:
+  push:
+    branches:
+      - master
+    tags:
+jobs:
+  build:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+    - name: Docker Build
+      run: |
+        docker build \
+          --build-arg "VERSION=${{ github.ref }}" \
+          --build-arg "COMMIT=${{ github.sha }}" \
+          --build-arg "BUILD_DATE=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          --tag "${{ github.repository }}:${{ github.ref }}" \
+          --tag "${{ github.repository }}:latest" \
+          .
+    - name: Docker Login
+      run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login --username ${{ github.actor }} --password-stdin
+
+    - name: Docker Push
+      run: |
+        docker push "${{ github.repository }}:${{ github.ref }}"
+        docker push "${{ github.repository }}:latest"

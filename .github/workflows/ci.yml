@@ -1,5 +1,5 @@
 name: Continious Integration
-on: push
+on: [push}
 jobs:
   build:
     name: Build
@@ -37,23 +37,3 @@ jobs:
       run: |
         go generate -v api/api.go
         go build -v -o bookmarks --tags "fts5"
-  docker:
-    on:
-      push:
-        branches:
-          - master
-        tags:
-    name: Docker
-    runs-on: ubuntu-latest
-    steps:
-    - name: Docker Image
-      run: |
-        docker build \
-          --build-arg "VERSION=${{ github.ref }}" \
-          --build-arg "COMMIT=${{ github.sha }}" \
-          --build-arg "BUILD_DATE=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
-          --tag "${{ github.repository }}:${{ github.ref }}" \
-          --tag "${{ github.repository }}:latest" \
-          .
-        docker push "${{ github.repository }}:${{ github.ref }}"
-        docker push "${{ github.repository }}:latest"
