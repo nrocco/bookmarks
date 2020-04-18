@@ -9,12 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	version = "devel"
-	commit  = "unknown"
-	date    = "unknown"
-	cfgFile string
-)
+var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:          "bookmarks",
