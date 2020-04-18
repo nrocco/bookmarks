@@ -5,9 +5,10 @@ RUN apk add --no-cache \
         git \
         musl-dev \
         sqlite
-RUN env GO111MODULE=on go get -u github.com/cortesi/modd/cmd/modd
-RUN go get -u github.com/kevinburke/go-bindata/...
-RUN go get -u golang.org/x/lint/golint
+RUN env GO111MODULE=on go get -u \
+        github.com/cortesi/modd/cmd/modd \
+        github.com/kevinburke/go-bindata/... \
+        golang.org/x/lint/golint
 WORKDIR /src
 
 
