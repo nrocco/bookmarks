@@ -4,6 +4,9 @@ lint:
 	golint ./...
 	go vet ./...
 
+test:
+	go test ./...
+
 container:
 	docker build \
 		--build-arg "VERSION=$(shell git describe --tags)" \
