@@ -37,7 +37,7 @@ COPY --from=nodebuilder /src/dist/ ./web/dist/
 RUN go generate -v api/api.go
 ARG VERSION=unknown
 ARG COMMIT=unknown
-ARG BUILD_DATE=unknown
+ARG DATE=unknown
 RUN go vet ./...
 RUN golint ./...
 RUN go build -v -o bookmarks \
@@ -45,7 +45,7 @@ RUN go build -v -o bookmarks \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
-            -X github.com/nrocco/bookmarks/cmd.buildDate=${BUILD_DATE}"
+            -X github.com/nrocco/bookmarks/cmd.date=${DATE}"
 
 
 

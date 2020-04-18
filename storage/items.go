@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// FeedItem represents a FeedItem as part of a Feed
 type FeedItem struct {
 	ID      int64
 	FeedID  int64
@@ -42,6 +43,7 @@ func (item *FeedItem) ToBookmark() *Bookmark {
 	}
 }
 
+// ListFeedItemsOptions is passed to ListFeedItems to filter feed items
 type ListFeedItemsOptions struct {
 	Search string
 	FeedID string

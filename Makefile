@@ -8,7 +8,7 @@ container:
 	docker build \
 		--build-arg "VERSION=$(shell git describe --tags)" \
 		--build-arg "COMMIT=$(shell git describe --always)" \
-		--build-arg "BUILD_DATE=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
+		--build-arg "DATE=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" \
 		--tag "$(DOCKER_IMAGE):$(shell git describe --tags)" \
 		--tag "$(DOCKER_IMAGE):latest" \
 		.

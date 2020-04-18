@@ -3,8 +3,8 @@ package storage
 import (
 	"errors"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/microcosm-cc/bluemonday"
@@ -17,13 +17,23 @@ const (
 )
 
 var (
+	// ErrExistingFeed is returned when you use AddFeed on an existing Feed
 	ErrExistingFeed    = errors.New("Existing feed")
+
+	// ErrNoFeedTitle is returned if the Feed does not have a title
 	ErrNoFeedTitle     = errors.New("Missing Feed.Title")
+
+	// ErrNoFeedURL is returned if the Feed does not have a URL
 	ErrNoFeedURL       = errors.New("Missing Feed.URL")
+
+	// ErrNoPrimaryKey is returned when if a Feed does not have ID
 	ErrNoPrimaryKey    = errors.New("Missing Feed.ID or Feed.URL")
+
+	// ErrNotExistingFeed is returned when you try to update/remove a new Feed
 	ErrNotExistingFeed = errors.New("Not an existing feed")
 )
 
+// Feed represents a feed in the database
 type Feed struct {
 	ID           int64
 	Created      time.Time
@@ -50,7 +60,7 @@ func (feed *Feed) Validate() error {
 	return nil
 }
 
-// FetchItems fetches new items from the given Feed
+// Fetch fetches new items from the given Feed
 func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	if feed.URL == "" {
 		return ErrNoFeedURL
@@ -145,6 +155,7 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	return nil
 }
 
+// ListFeedsOptions is used to pass filters to ListFeeds
 type ListFeedsOptions struct {
 	Search            string
 	NotRefreshedSince time.Time

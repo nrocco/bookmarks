@@ -17,6 +17,7 @@ const (
 func qbLogger(format string, v ...interface{}) {
 }
 
+// New returns a new instace of a Bookmarks Store
 func New(path string) (*Store, error) {
 	var err error
 
@@ -39,6 +40,7 @@ func New(path string) (*Store, error) {
 	return &store, nil
 }
 
+// Store is used to persist Bookmark, Feed and Thougt
 type Store struct {
 	db *qb.DB
 	fs string

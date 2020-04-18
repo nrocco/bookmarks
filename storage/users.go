@@ -1,5 +1,6 @@
 package storage
 
+// UserTokenExists checks if there is exactly one user with the given token
 func (store *Store) UserTokenExists(token string) bool {
 	var count int64
 
@@ -11,6 +12,7 @@ func (store *Store) UserTokenExists(token string) bool {
 	return count == 1
 }
 
+// UserPasswordHash gets the hashed password for the given user
 func (store *Store) UserPasswordHash(username string) string {
 	var password string
 
@@ -22,6 +24,7 @@ func (store *Store) UserPasswordHash(username string) string {
 	return password
 }
 
+// UserToken gets the token for the given user
 func (store *Store) UserToken(username string) string {
 	var token string
 

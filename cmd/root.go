@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	version   = "devel"
-	commit    = "unknown"
-	buildDate = "unknown"
-	cfgFile   string
+	version = "devel"
+	commit  = "unknown"
+	date    = "unknown"
+	cfgFile string
 )
 
 var rootCmd = &cobra.Command{
