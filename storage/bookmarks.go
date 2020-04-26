@@ -2,35 +2,43 @@ package storage
 
 import (
 	"errors"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/go-shiori/go-readability"
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
+	"github.com/timshannon/bolthold"
+)
+
+var (
+	// ErrNoBookmarkURL is returned if the Feed does not have a ErrNoBookmarkURL
+	ErrNoBookmarkURL = errors.New("Missing Bookmark.URL")
 )
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID       int64
+	ID       string
+	URL      string `boltholdKey:"ID"`
+	Title    string
 	Created  time.Time
 	Updated  time.Time
-	Title    string
-	URL      string
 	Excerpt  string
-	Content  string
+	Content  string   `json:"-"`
+	Tags     []string `boltholdSliceIndex:"Tags"`
 	Archived bool
 }
 
 // Fetch downloads the bookmark, reduces the result to a readable plain text format
 func (bookmark *Bookmark) Fetch() error {
 	if bookmark.URL == "" {
-		return errors.New("Bookmark.URL is empty")
+		return ErrNoBookmarkURL
 	}
 
 	logger := log.With().Str("url", bookmark.URL).Logger()
 
-	if bookmark.ID != 0 {
-		logger = logger.With().Int64("id", bookmark.ID).Logger()
+	if bookmark.ID != "" {
+		logger = logger.With().Str("id", bookmark.ID).Logger()
 	}
 
 	logger.Info().Msg("Fetching bookmark content")
@@ -64,6 +72,7 @@ func (bookmark *Bookmark) Fetch() error {
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
 	Search      string
+	Tags        []string
 	ReadItLater bool
 	Limit       int
 	Offset      int
@@ -71,130 +80,82 @@ type ListBookmarksOptions struct {
 
 // ListBookmarks fetches multiple bookmarks from the database
 func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
-	query := store.db.Select("bookmarks")
+	bookmarks := []*Bookmark{}
+	query := &bolthold.Query{}
 
 	if options.ReadItLater {
-		query.Where("archived = ?", false)
+		query.And("Archived").Eq(false)
 	}
 
 	if options.Search != "" {
-		query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
+		re, err := regexp.Compile("(?im)" + options.Search)
+		if err != nil {
+			return &bookmarks, 0
+		}
+
+		query.And("Title").RegExp(re).Or(bolthold.Where("URL").RegExp(re)).Or(bolthold.Where("Content").RegExp(re))
 	}
 
-	bookmarks := []*Bookmark{}
-	totalCount := 0
+	for _, tag := range options.Tags {
+		if tag == "" {
+			continue
+		} else if strings.HasPrefix(tag, "-") {
+			query.And("Tags").Not().Contains(strings.TrimPrefix(tag, "-"))
+		} else {
+			query.And("Tags").Contains(tag)
+		}
+	}
 
-	query.Columns("COUNT(id)")
-	query.LoadValue(&totalCount)
+	totalCount, err := store.db.Count(&Bookmark{}, query)
+	if err != nil {
+		log.Warn().Err(err).Msg("Error fetching bookmarks count")
+		return &bookmarks, 0
+	}
 
-	query.Columns("id", "created", "updated", "archived", "title", "url", "excerpt")
-	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
-	query.Offset(options.Offset)
-	query.Load(&bookmarks)
+	query.Skip(options.Offset)
+	query.SortBy("Updated").Reverse()
+
+	if err := store.db.Find(&bookmarks, query); err != nil {
+		log.Warn().Err(err).Msg("Error fetching bookmarks")
+		return &bookmarks, 0
+	}
 
 	return &bookmarks, totalCount
 }
 
-// GetBookmark finds a single bookmark by ID or URL
+// GetBookmark finds a single bookmark by URL
 func (store *Store) GetBookmark(bookmark *Bookmark) error {
-	query := store.db.Select("bookmarks")
-	query.Limit(1)
-
-	if bookmark.ID != 0 {
-		query.Where("id = ?", bookmark.ID)
-	} else if bookmark.URL != "" {
-		query.Where("url = ?", bookmark.URL)
-	} else {
-		return errors.New("Missing Bookmark.ID or Bookmark.URL")
-	}
-
-	if err := query.LoadValue(&bookmark); err != nil {
-		return err
-	}
-
-	return nil
+	return store.db.FindOne(bookmark, bolthold.Where("ID").Eq(bookmark.ID))
 }
 
-// AddBookmark persists a bookmark to the database and schedules an async job to fetch the content
-func (store *Store) AddBookmark(bookmark *Bookmark) error {
-	if bookmark.ID != 0 {
-		return errors.New("Existing bookmark")
-	}
-
+// PersistBookmark persists a bookmark to the database and schedules an async job to fetch the content
+func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 	if bookmark.URL == "" {
-		return errors.New("Missing Bookmark.URL")
+		return ErrNoBookmarkURL
 	}
 
 	if bookmark.Title == "" {
 		bookmark.Title = bookmark.URL
 	}
 
-	bookmark.Created = time.Now()
-	bookmark.Updated = time.Now()
-
-	query := store.db.Insert("bookmarks")
-	query.Columns("title", "created", "updated", "url", "archived", "content", "excerpt")
-	query.Record(bookmark)
-
-	l := log.With().Int64("id", bookmark.ID).Str("url", bookmark.URL).Logger()
-
-	if _, err := query.Exec(); err != nil {
-		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
-			// TODO get the existing bookmark from the database to fill the Bookmark.ID field properly
-			l.Info().Msg("Bookmark already exists")
-			return nil
-		}
-
-		l.Error().Err(err).Msg("Error persisting bookmark")
-		return err
-	}
-
-	l.Info().Msg("Persisted bookmark")
-
-	return nil
-}
-
-// UpdateBookmark updates the given bookmark
-func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
-	if bookmark.ID == 0 {
-		return errors.New("Not an existing bookmark")
-	}
-
-	if bookmark.URL == "" {
-		return errors.New("Missing Bookmark.URL")
+	if bookmark.ID == "" {
+		bookmark.ID = generateID()
+		bookmark.Created = time.Now()
 	}
 
 	bookmark.Updated = time.Now()
 
-	query := store.db.Update("bookmarks")
-	query.Set("updated", bookmark.Updated)
-	query.Set("title", bookmark.Title)
-	query.Set("url", bookmark.URL)
-	query.Set("excerpt", bookmark.Excerpt)
-	query.Set("content", bookmark.Content)
-	query.Set("archived", bookmark.Archived)
-	query.Where("id = ?", bookmark.ID)
-
-	if _, err := query.Exec(); err != nil {
+	if err := store.db.Upsert(bookmark.URL, bookmark); err != nil {
 		return err
 	}
+
+	log.Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Persisted bookmark")
 
 	return nil
 }
 
 // DeleteBookmark deletes the given bookmark from the database
 func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
-	if bookmark.ID == 0 {
-		return errors.New("Not an existing bookmark")
-	}
-
-	query := store.db.Delete("bookmarks")
-	query.Where("id = ?", bookmark.ID)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return store.db.DeleteMatching(bookmark, bolthold.Where("ID").Eq(bookmark.ID))
 }

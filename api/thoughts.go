@@ -22,21 +22,21 @@ type thoughts struct {
 func (api thoughts) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", api.list)
+	r.Get("/", api.listThought)
 	r.Route("/{title}", func(r chi.Router) {
 		r.Use(api.middleware)
-		r.Get("/", api.get)
-		r.Put("/", api.put)
-		r.Delete("/", api.delete)
+		r.Get("/", api.getThought)
+		r.Put("/", api.putThought)
+		r.Delete("/", api.deleteThought)
 	})
 
 	return r
 }
 
-func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) listThought(w http.ResponseWriter, r *http.Request) {
 	thoughts, totalCount := api.store.ListThoughts(&storage.ListThoughtsOptions{
 		Search: r.URL.Query().Get("q"),
-		Tags:   r.URL.Query().Get("tags"),
+		Tags:   strings.Split(r.URL.Query().Get("tags"), ","),
 		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
 		Offset: asInt(r.URL.Query().Get("_offset"), 0),
 	})
@@ -60,7 +60,7 @@ func (api *thoughts) middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) getThought(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
@@ -71,7 +71,7 @@ func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(thought.Content))
 }
 
-func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) putThought(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	if tags := r.Header.Get("X-Tags"); tags != "" {
@@ -105,7 +105,7 @@ func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(thought.Content))
 }
 
-func (api *thoughts) delete(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) deleteThought(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	if err := api.store.DeleteThought(thought); err != nil {

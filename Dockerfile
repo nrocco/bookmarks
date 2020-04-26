@@ -4,7 +4,7 @@ RUN apk add --no-cache \
         gcc \
         git \
         musl-dev \
-        sqlite
+    && true
 RUN env GO111MODULE=on go get -u \
         github.com/cortesi/modd/cmd/modd \
         github.com/kevinburke/go-bindata/... \
@@ -42,7 +42,6 @@ ARG DATE=unknown
 RUN go vet ./...
 RUN golint ./...
 RUN go build -v -o bookmarks \
-        --tags "fts5" \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
@@ -53,7 +52,6 @@ RUN go build -v -o bookmarks \
 FROM alpine:edge
 RUN apk add --no-cache \
         ca-certificates \
-        sqlite \
     && true
 COPY --from=gobuilder /src/bookmarks /usr/bin/bookmarks
 EXPOSE 3000

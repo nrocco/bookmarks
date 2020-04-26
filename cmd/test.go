@@ -39,9 +39,8 @@ var testFetchFeedCmd = &cobra.Command{
 			// Refreshed: time.Now().Add(-7 * time.Hour),
 			// Etag:      os.Args[2],
 		}
-		feedItems := []*storage.FeedItem{}
 
-		if err := feed.Fetch(&feedItems); err != nil {
+		if err := feed.Fetch(); err != nil {
 			return err
 		}
 
@@ -54,7 +53,7 @@ var testFetchFeedCmd = &cobra.Command{
 		fmt.Printf("  LastAuthored: %v\n", feed.LastAuthored)
 		fmt.Printf("  Items:\n")
 
-		for _, item := range feedItems {
+		for _, item := range feed.Items {
 			fmt.Printf("  - Title: %s\n", item.Title)
 			fmt.Printf("    URL: %s\n", item.URL)
 			fmt.Printf("    Date: %v\n", item.Date)
