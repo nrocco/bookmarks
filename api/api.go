@@ -32,9 +32,8 @@ func New(store *storage.Store, auth bool) *API {
 			r.Use(authenticator(store))
 		}
 		r.Mount("/bookmarks", bookmarks{store}.Routes())
-		r.Mount("/thoughts", thoughts{store}.Routes())
 		r.Mount("/feeds", feeds{store}.Routes())
-		r.Mount("/items", items{store}.Routes())
+		r.Mount("/thoughts", thoughts{store}.Routes())
 	})
 
 	r.Get("/*", bindataAssetHandler)

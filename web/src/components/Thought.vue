@@ -33,7 +33,7 @@
           <div class="tags">
             <span v-for="tag in thought.Tags" :key="tag" class="tag is-light">{{ tag }}</span>
           </div>
-          <p class="content"><VueShowdown :markdown="thought.Content" /></p>
+          <p v-if="thought.Content" class="content"><VueShowdown v-if="thought.Content" :markdown="thought.Content" /></p>
         </div>
         <div v-else>
           <div class="field is-grouped is-grouped-multiline">

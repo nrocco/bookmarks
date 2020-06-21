@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/nrocco/bookmarks/storage"
@@ -22,22 +23,23 @@ type bookmarks struct {
 func (api bookmarks) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", api.list)
-	r.Post("/", api.create)
-	r.Get("/save", api.save)
+	r.Get("/", api.listBookmark)
+	r.Post("/", api.createBookmark)
+	r.Get("/save", api.saveBookmark)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Use(api.middleware)
-		r.Get("/", api.get)
-		r.Patch("/", api.update)
-		r.Delete("/", api.delete)
+		r.Get("/", api.getBookmark)
+		r.Patch("/", api.updateBookmark)
+		r.Delete("/", api.deleteBookmark)
 	})
 
 	return r
 }
 
-func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) listBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmarks, totalCount := api.store.ListBookmarks(&storage.ListBookmarksOptions{
 		Search:      r.URL.Query().Get("q"),
+		Tags:        strings.Split(r.URL.Query().Get("tags"), ","),
 		ReadItLater: (r.URL.Query().Get("readitlater") == "true"),
 		Limit:       asInt(r.URL.Query().Get("_limit"), 50),
 		Offset:      asInt(r.URL.Query().Get("_offset"), 0),
@@ -48,7 +50,7 @@ func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, bookmarks)
 }
 
-func (api *bookmarks) create(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) createBookmark(w http.ResponseWriter, r *http.Request) {
 	var bookmark storage.Bookmark
 
 	decoder := json.NewDecoder(r.Body)
@@ -64,7 +66,7 @@ func (api *bookmarks) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.AddBookmark(&bookmark); err != nil {
+	if err := api.store.PersistBookmark(&bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
@@ -72,7 +74,7 @@ func (api *bookmarks) create(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, &bookmark)
 }
 
-func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) saveBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmark := storage.Bookmark{
 		URL:      r.URL.Query().Get("url"),
 		Archived: false,
@@ -83,7 +85,7 @@ func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.AddBookmark(&bookmark); err != nil {
+	if err := api.store.PersistBookmark(&bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
@@ -93,13 +95,7 @@ func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
 
 func (api *bookmarks) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-		if err != nil {
-			jsonError(w, errors.New("Bookmark Not Found"), 404)
-			return
-		}
-
-		bookmark := storage.Bookmark{ID: ID}
+		bookmark := storage.Bookmark{ID: chi.URLParam(r, "id")}
 
 		if err := api.store.GetBookmark(&bookmark); err != nil {
 			jsonError(w, errors.New("Bookmark Not Found"), 404)
@@ -111,13 +107,13 @@ func (api *bookmarks) middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *bookmarks) get(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) getBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
 
 	jsonResponse(w, 200, bookmark)
 }
 
-func (api *bookmarks) update(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) updateBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
 
 	decoder := json.NewDecoder(r.Body)
@@ -128,7 +124,7 @@ func (api *bookmarks) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.UpdateBookmark(bookmark); err != nil {
+	if err := api.store.PersistBookmark(bookmark); err != nil {
 		jsonError(w, err, 500)
 		return
 	}
@@ -136,7 +132,7 @@ func (api *bookmarks) update(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, bookmark)
 }
 
-func (api *bookmarks) delete(w http.ResponseWriter, r *http.Request) {
+func (api *bookmarks) deleteBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
 
 	if err := api.store.DeleteBookmark(bookmark); err != nil {

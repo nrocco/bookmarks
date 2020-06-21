@@ -1,7 +1,8 @@
 /api/bindata.go
 /build
-/var
 /coverage
+/dist
+/var
 /vendor
 /web/dist
 /web/node_modules

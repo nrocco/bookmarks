@@ -2,45 +2,51 @@ package storage
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-shiori/go-readability"
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	// ErrNoBookmarkURL is returned if the Bookmark does not have a URL
+	ErrNoBookmarkURL = errors.New("Missing Bookmark.URL")
+
+	// ErrNoBookmarkKey is returned if the Bookmark does not have a ID or URL
+	ErrNoBookmarkKey = errors.New("Missing Bookmark.ID or Bookmark.URL")
 )
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID       int64
+	ID       string
+	URL      string
+	Title    string
 	Created  time.Time
 	Updated  time.Time
-	Title    string
-	URL      string
 	Excerpt  string
-	Content  string
+	Content  string `json:",omitempty"`
+	Tags     Tags
 	Archived bool
 }
 
 // Fetch downloads the bookmark, reduces the result to a readable plain text format
 func (bookmark *Bookmark) Fetch() error {
 	if bookmark.URL == "" {
-		return errors.New("Bookmark.URL is empty")
+		return ErrNoBookmarkURL
 	}
 
-	logger := log.With().Str("url", bookmark.URL).Logger()
+	logger := log.With().Str("id", bookmark.ID).Str("url", bookmark.URL).Logger()
 
-	if bookmark.ID != 0 {
-		logger = logger.With().Int64("id", bookmark.ID).Logger()
-	}
-
-	logger.Info().Msg("Fetching bookmark content")
+	logger.Info().Msg("Fetching bookmark")
 
 	article, err := readability.FromURL(bookmark.URL, 5*time.Second)
 	if err != nil {
 		bookmark.Title = bookmark.URL
 		bookmark.Content = "Error fetching bookmark"
 		bookmark.Excerpt = "Error fetching bookmark"
-		return nil
+		logger.Warn().Err(err).Msg("Error fetching bookmark")
+		return err
 	}
 
 	bookmark.Title = article.Title
@@ -56,7 +62,7 @@ func (bookmark *Bookmark) Fetch() error {
 		bookmark.Excerpt = article.Excerpt
 	}
 
-	logger.Info().Msg("Successfully fetched bookmark content")
+	logger.Info().Msg("Successfully fetched bookmark")
 
 	return nil
 }
@@ -64,6 +70,7 @@ func (bookmark *Bookmark) Fetch() error {
 // ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
 type ListBookmarksOptions struct {
 	Search      string
+	Tags        Tags
 	ReadItLater bool
 	Limit       int
 	Offset      int
@@ -77,21 +84,38 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 		query.Where("archived = ?", false)
 	}
 
+	// TODO add back full text search here: query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search) // TODO rowid does not work with string ID's
 	if options.Search != "" {
-		query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
+		query.Where("(title LIKE ? OR url LIKE ? OR content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
+	}
+
+	for _, tag := range options.Tags {
+		if tag == "" {
+			continue
+		} else if strings.HasPrefix(tag, "-") {
+			query.Where("NOT EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", strings.TrimPrefix(tag, "-"))
+		} else {
+			query.Where("EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", tag)
+		}
 	}
 
 	bookmarks := []*Bookmark{}
 	totalCount := 0
 
 	query.Columns("COUNT(id)")
-	query.LoadValue(&totalCount)
+	if err := query.LoadValue(&totalCount); err != nil {
+		log.Warn().Err(err).Msg("Error fetching bookmarks count")
+		return &bookmarks, 0
+	}
 
-	query.Columns("id", "created", "updated", "archived", "title", "url", "excerpt")
+	query.Columns("id", "created", "updated", "archived", "title", "url", "excerpt", "tags")
 	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
-	query.Load(&bookmarks)
+	if _, err := query.Load(&bookmarks); err != nil {
+		log.Warn().Err(err).Msg("Error fetching bookmarks")
+		return &bookmarks, 0
+	}
 
 	return &bookmarks, totalCount
 }
@@ -101,12 +125,12 @@ func (store *Store) GetBookmark(bookmark *Bookmark) error {
 	query := store.db.Select("bookmarks")
 	query.Limit(1)
 
-	if bookmark.ID != 0 {
+	if bookmark.ID != "" {
 		query.Where("id = ?", bookmark.ID)
 	} else if bookmark.URL != "" {
 		query.Where("url = ?", bookmark.URL)
 	} else {
-		return errors.New("Missing Bookmark.ID or Bookmark.URL")
+		return ErrNoBookmarkKey
 	}
 
 	if err := query.LoadValue(&bookmark); err != nil {
@@ -116,85 +140,79 @@ func (store *Store) GetBookmark(bookmark *Bookmark) error {
 	return nil
 }
 
-// AddBookmark persists a bookmark to the database and schedules an async job to fetch the content
-func (store *Store) AddBookmark(bookmark *Bookmark) error {
-	if bookmark.ID != 0 {
-		return errors.New("Existing bookmark")
-	}
-
+// PersistBookmark persists a bookmark to the database and schedules an async job to fetch the content
+func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 	if bookmark.URL == "" {
-		return errors.New("Missing Bookmark.URL")
+		return ErrNoBookmarkURL
 	}
 
 	if bookmark.Title == "" {
 		bookmark.Title = bookmark.URL
 	}
 
-	bookmark.Created = time.Now()
+	if bookmark.Created.IsZero() {
+		bookmark.Created = time.Now()
+	}
+
 	bookmark.Updated = time.Now()
 
-	query := store.db.Insert("bookmarks")
-	query.Columns("title", "created", "updated", "url", "archived", "content", "excerpt")
-	query.Record(bookmark)
+	if bookmark.ID == "" {
+		bookmark.ID = generateUUID()
 
-	l := log.With().Int64("id", bookmark.ID).Str("url", bookmark.URL).Logger()
+		query := store.db.Insert("bookmarks")
+		query.Columns("id", "archived", "created", "content", "excerpt", "tags", "title", "updated", "url")
+		query.OnConflict("url", "archived=excluded.archived, content=excluded.content, excerpt=excluded.excerpt, tags=excluded.tags, title=excluded.title, updated=excluded.updated")
+		// query.Returning("id") TODO this does not work in combination with on conflict
+		query.Record(bookmark)
 
-	if _, err := query.Exec(); err != nil {
-		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
-			// TODO get the existing bookmark from the database to fill the Bookmark.ID field properly
-			l.Info().Msg("Bookmark already exists")
-			return nil
+		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error creating bookmark")
+			return err
 		}
+	} else {
+		query := store.db.Update("bookmarks")
+		query.Set("archived", bookmark.Archived)
+		query.Set("content", bookmark.Content)
+		query.Set("excerpt", bookmark.Excerpt)
+		query.Set("tags", bookmark.Tags)
+		query.Set("title", bookmark.Title)
+		query.Set("updated", bookmark.Updated)
+		query.Set("url", bookmark.URL)
+		query.Where("id = ?", bookmark.ID)
 
-		l.Error().Err(err).Msg("Error persisting bookmark")
-		return err
+		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error updating bookmark")
+			return err
+		}
 	}
 
-	l.Info().Msg("Persisted bookmark")
-
-	return nil
-}
-
-// UpdateBookmark updates the given bookmark
-func (store *Store) UpdateBookmark(bookmark *Bookmark) error {
-	if bookmark.ID == 0 {
-		return errors.New("Not an existing bookmark")
-	}
-
-	if bookmark.URL == "" {
-		return errors.New("Missing Bookmark.URL")
-	}
-
-	bookmark.Updated = time.Now()
-
-	query := store.db.Update("bookmarks")
-	query.Set("updated", bookmark.Updated)
-	query.Set("title", bookmark.Title)
-	query.Set("url", bookmark.URL)
-	query.Set("excerpt", bookmark.Excerpt)
-	query.Set("content", bookmark.Content)
-	query.Set("archived", bookmark.Archived)
-	query.Where("id = ?", bookmark.ID)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
+	log.Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Persisted bookmark")
 
 	return nil
 }
 
 // DeleteBookmark deletes the given bookmark from the database
 func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
-	if bookmark.ID == 0 {
-		return errors.New("Not an existing bookmark")
+	if bookmark.ID == "" && bookmark.URL == "" {
+		return ErrNoBookmarkKey
 	}
 
 	query := store.db.Delete("bookmarks")
-	query.Where("id = ?", bookmark.ID)
+
+	if bookmark.ID != "" {
+		query.Where("id = ?", bookmark.ID)
+	}
+
+	if bookmark.URL != "" {
+		query.Where("url = ?", bookmark.URL)
+	}
 
 	if _, err := query.Exec(); err != nil {
+		log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error deleting bookmark")
 		return err
 	}
+
+	log.Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Bookmark deleted")
 
 	return nil
 }

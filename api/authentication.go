@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/nrocco/bookmarks/storage"
 )
 
@@ -21,12 +19,14 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 				username := r.PostFormValue("username")
 				password := r.PostFormValue("password")
 
-				if err := bcrypt.CompareHashAndPassword([]byte(store.UserPasswordHash(username)), []byte(password)); err != nil {
+				token, err := store.Authenticate(username, password)
+
+				if err != nil {
 					w.WriteHeader(401)
 					return
 				}
 
-				setTokenCookie(w, store.UserToken(username), time.Now().Add(7*24*time.Hour))
+				setTokenCookie(w, token, time.Now().Add(7*24*time.Hour))
 
 				if next := r.PostFormValue("next"); next != "" {
 					http.Redirect(w, r, next, 301)

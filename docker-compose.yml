@@ -1,5 +1,5 @@
 ---
-version: "3.7"
+version: "3.8"
 services:
   frontend:
     build:
@@ -10,6 +10,11 @@ services:
       - "8080:8080"
     volumes:
       - "./web:/src"
+      - type: volume
+        source: node_cache
+        target: /src/node_modules
+        volume:
+          nocopy: true
   backend:
     build:
       context: .
@@ -19,3 +24,11 @@ services:
       - "3000:3000"
     volumes:
       - ".:/src"
+      - type: volume
+        source: go_cache
+        target: /go/pkg
+        volume:
+          nocopy: true
+volumes:
+  node_cache:
+  go_cache:

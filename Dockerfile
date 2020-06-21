@@ -42,7 +42,7 @@ ARG DATE=unknown
 RUN go vet ./...
 RUN golint ./...
 RUN go build -v -o bookmarks \
-        --tags "fts5" \
+        --tags "json1 fts5" \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \

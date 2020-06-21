@@ -5,8 +5,8 @@
         <div class="control is-expanded">
           <div v-if="newFeed==null" class="select">
             <select v-model="filters.feed" @change="onFilterChange">
-              <option :value="undefined">All</option>
-              <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }} ({{ feed.Items }})</option>
+              <option :value="undefined">All ({{ items.length }})</option>
+              <option v-for="feed in feeds" :key="feed.ID" :value="feed.ID">{{ feed.Title }} ({{ feed.Items.length }})</option>
             </select>
           </div>
           <div v-else>
@@ -75,10 +75,22 @@ export default {
     newFeed: null,
     filters: {},
     feeds: [],
-    items: []
   }),
 
   computed: {
+    items () {
+      const selectedFeed = this.selectedFeed
+      if (selectedFeed) {
+        return selectedFeed.Items.map(item => {
+          item.Feed = selectedFeed
+          return item
+        })
+      }
+      return this.feeds.map(feed => feed.Items.map(item => {
+        item.Feed = feed
+        return item
+      })).flat()
+    },
     isIphone () {
       return window.navigator.userAgent.includes('iPhone')
     },
@@ -86,22 +98,17 @@ export default {
       if (!this.filters.feed) {
         return null
       }
-      return this.feeds.filter(feed => feed.ID === parseInt(this.filters.feed)).shift()
+      return this.feeds.filter(feed => feed.ID === this.filters.feed).shift()
     }
   },
 
   methods: {
     onLoad (filters) {
       this.feeds = []
-      this.items = []
       this.filters = filters
 
       this.$http.get(`/feeds`).then(response => {
         this.feeds = response.data
-      })
-
-      this.$http.get(`/items`, { params: this.filters }).then(response => {
-        this.items = response.data
       })
     },
 
@@ -123,14 +130,14 @@ export default {
     },
 
     onReadItLaterClicked (item) {
-      this.$http.post(`/items/${item.ID}/readitlater`).then(() => {
-        this.items.splice(this.items.indexOf(item), 1)
+      this.$http.post(`/feeds/${item.Feed.ID}/items/${item.ID}/readitlater`).then(() => {
+        item.Feed.Items.splice(item.Feed.Items.indexOf(item), 1)
       })
     },
 
     onRemoveClicked (item) {
-      this.$http.delete(`/items/${item.ID}`).then(() => {
-        this.items.splice(this.items.indexOf(item), 1)
+      this.$http.delete(`/feeds/${item.Feed.ID}/items/${item.ID}`).then(() => {
+        item.Feed.Items.splice(item.Feed.Items.indexOf(item), 1)
       })
     },
 

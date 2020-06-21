@@ -4,65 +4,70 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
+)
+
+var (
+	// ErrNoThoughtTitle is returned if the Thought does not have a Title
+	ErrNoThoughtTitle = errors.New("Missing Thought.Title")
+
+	// ErrNoThoughtKey is returned if the Thought does not have a ID or Title
+	ErrNoThoughtKey = errors.New("Missing Thought.ID or Thought.Title")
 )
 
 // Thought holds information about a thought
 type Thought struct {
-	ID      int64 `json:"-"`
+	ID      string
 	Created time.Time
 	Updated time.Time
 	Title   string
-	Content string
-	Tags    []string
+	Content string `json:",omitempty"`
+	Tags    Tags
 }
 
 // ListThoughtsOptions can be passed to ListThoughts to filter thoughts
 type ListThoughtsOptions struct {
 	Search string
-	Tags   string
+	Tags   Tags
 	Limit  int
 	Offset int
 }
 
 // ListThoughts lists thoughts from the database
 func (store *Store) ListThoughts(options *ListThoughtsOptions) (*[]*Thought, int) {
-	query := store.db.Select("thoughts t")
+	query := store.db.Select("thoughts")
 
 	if options.Search != "" {
-		query.Where("t.title LIKE ? OR t.content LIKE ?", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("title LIKE ? OR content LIKE ?", "%"+options.Search+"%", "%"+options.Search+"%")
 	}
 
-	for _, tag := range strings.Split(options.Tags, ",") {
+	for _, tag := range options.Tags {
 		if tag == "" {
 			continue
-		}
-
-		if strings.HasPrefix(tag, "-") {
-			query.Where("t.id NOT IN (SELECT id FROM thoughts_tags WHERE name = ?)", strings.TrimPrefix(tag, "-"))
+		} else if strings.HasPrefix(tag, "-") {
+			query.Where("NOT EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", strings.TrimPrefix(tag, "-"))
 		} else {
-			query.Where("t.id IN (SELECT id FROM thoughts_tags WHERE name = ?)", tag)
+			query.Where("EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", tag)
 		}
 	}
 
 	thoughts := []*Thought{}
 	totalCount := 0
 
-	query.Columns("COUNT(t.id)")
-	query.LoadValue(&totalCount)
+	query.Columns("COUNT(id)")
+	if err := query.LoadValue(&totalCount); err != nil {
+		log.Warn().Err(err).Msg("Error fetching thought count")
+		return &thoughts, 0
+	}
 
-	query.Columns("t.id", "t.created", "t.updated", "t.title", "t.content")
-	query.OrderBy("t.created", "DESC")
+	query.Columns("id", "created", "updated", "tags", "title")
+	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
-	query.Load(&thoughts)
-
-	for _, thought := range thoughts {
-		thought.Tags = []string{}
-
-		query = store.db.Select("thoughts_tags")
-		query.Columns("name")
-		query.Where("id = ?", thought.ID)
-		query.LoadValue(&thought.Tags)
+	if _, err := query.Load(&thoughts); err != nil {
+		log.Warn().Err(err).Msg("Error fetching thoughts")
+		return &thoughts, 0
 	}
 
 	return &thoughts, totalCount
@@ -73,85 +78,91 @@ func (store *Store) GetThought(thought *Thought) error {
 	query := store.db.Select("thoughts")
 	query.Limit(1)
 
-	query.Where("title = ?", thought.Title)
+	if thought.ID != "" {
+		query.Where("id = ?", thought.ID)
+	} else if thought.Title != "" {
+		query.Where("title = ?", thought.Title)
+	} else {
+		return ErrNoThoughtKey
+	}
 
 	if err := query.LoadValue(&thought); err != nil {
 		return err
 	}
-
-	thought.Tags = []string{}
-
-	query = store.db.Select("thoughts_tags")
-	query.Columns("name")
-	query.Where("id = ?", thought.ID)
-	query.LoadValue(&thought.Tags)
 
 	return nil
 }
 
 // PersistThought adds a thought to the database
 func (store *Store) PersistThought(thought *Thought) error {
-	if thought.ID == 0 {
+	if thought.Title == "" {
+		return ErrNoThoughtTitle
+	}
+
+	if thought.ID == "" {
+		thought.ID = generateUUID()
+	}
+
+	if thought.Created.IsZero() {
 		thought.Created = time.Now()
-		thought.Updated = time.Now()
+	}
+
+	thought.Updated = time.Now()
+
+	if thought.ID == "" {
+		thought.ID = generateUUID()
 
 		query := store.db.Insert("thoughts")
-		query.Columns("created", "updated", "title", "content")
+		query.Columns("id", "title", "created", "content", "tags", "updated")
+		query.OnConflict("title", "content=excluded.content, tags=excluded.tags, updated=excluded.updated")
+		// query.Returning("id") TODO this does not work in combination with on conflict
 		query.Record(thought)
 
 		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error persisting thought")
 			return err
 		}
 	} else {
-		thought.Updated = time.Now()
-
 		query := store.db.Update("thoughts")
-		query.Set("updated", thought.Updated)
-		query.Set("title", thought.Title)
 		query.Set("content", thought.Content)
+		query.Set("tags", thought.Tags)
+		query.Set("title", thought.Title)
+		query.Set("updated", thought.Updated)
 		query.Where("id = ?", thought.ID)
 
 		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error updating thought")
 			return err
 		}
 	}
 
-	for _, tag := range thought.Tags {
-		query := store.db.Insert("thoughts_tags").OrIgnore()
-		query.Columns("id", "name")
-		query.Values(thought.ID, tag)
-
-		if _, err := query.Exec(); err != nil {
-			return err
-		}
-	}
-
-	query := store.db.Delete("thoughts_tags")
-	query.Where("id = ?", thought.ID)
-
-	for _, tag := range thought.Tags {
-		query.Where("name != ?", tag)
-	}
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
+	log.Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Persisted thought")
 
 	return nil
 }
 
 // DeleteThought removes a thought from the database
 func (store *Store) DeleteThought(thought *Thought) error {
-	if thought.ID == 0 {
-		return errors.New("Not an existing thought")
+	if thought.ID == "" && thought.Title == "" {
+		return ErrNoThoughtKey
 	}
 
 	query := store.db.Delete("thoughts")
-	query.Where("id = ?", thought.ID)
+
+	if thought.ID != "" {
+		query.Where("id = ?", thought.ID)
+	}
+
+	if thought.Title != "" {
+		query.Where("title = ?", thought.Title)
+	}
 
 	if _, err := query.Exec(); err != nil {
+		log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error deleting thought")
 		return err
 	}
+
+	log.Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Thought refreshed")
 
 	return nil
 }

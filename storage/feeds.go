@@ -6,36 +6,25 @@ import (
 	"strings"
 	"time"
 
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15"
-)
-
 var (
-	// ErrExistingFeed is returned when you use AddFeed on an existing Feed
-	ErrExistingFeed    = errors.New("Existing feed")
-
-	// ErrNoFeedTitle is returned if the Feed does not have a title
-	ErrNoFeedTitle     = errors.New("Missing Feed.Title")
-
 	// ErrNoFeedURL is returned if the Feed does not have a URL
-	ErrNoFeedURL       = errors.New("Missing Feed.URL")
+	ErrNoFeedURL = errors.New("Missing Feed.URL")
 
-	// ErrNoPrimaryKey is returned when if a Feed does not have ID
-	ErrNoPrimaryKey    = errors.New("Missing Feed.ID or Feed.URL")
+	// ErrNoFeedKey is returned if the Feed does not have a ID or URL
+	ErrNoFeedKey = errors.New("Missing Feed.ID or Feed.URL")
 
-	// ErrNotExistingFeed is returned when you try to update/remove a new Feed
-	ErrNotExistingFeed = errors.New("Not an existing feed")
+	// ErrNotExistingFeedItem is returned if a feed does not contain an item
+	ErrNotExistingFeedItem = errors.New("Item does not exist in Feed")
 )
 
 // Feed represents a feed in the database
 type Feed struct {
-	ID           int64
+	ID           string
 	Created      time.Time
 	Updated      time.Time
 	Refreshed    time.Time
@@ -43,34 +32,28 @@ type Feed struct {
 	Title        string
 	URL          string
 	Etag         string
-	Archived     bool
-	Items        int
-}
-
-// Validate is used to assert Title and URL are set
-func (feed *Feed) Validate() error {
-	if feed.Title == "" {
-		return ErrNoFeedTitle
-	}
-
-	if feed.URL == "" {
-		return ErrNoFeedURL
-	}
-
-	return nil
+	Tags         Tags
+	Items        FeedItems
 }
 
 // Fetch fetches new items from the given Feed
-func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
+func (feed *Feed) Fetch() error {
 	if feed.URL == "" {
 		return ErrNoFeedURL
 	}
 
-	client := &http.Client{}
-	request, _ := http.NewRequest("GET", feed.URL, nil)
-	request.Header.Set("User-Agent", defaultUserAgent)
+	logger := log.With().Str("id", feed.ID).Str("url", feed.URL).Logger()
 
-	logger := log.With().Str("url", feed.URL).Logger()
+	logger.Info().Msg("Fetching feed")
+
+	client := &http.Client{}
+
+	request, err := http.NewRequest("GET", feed.URL, nil)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("User-Agent", defaultUserAgent)
 
 	if feed.Etag != "" {
 		request.Header.Set("If-None-Match", feed.Etag)
@@ -106,16 +89,16 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	textCleaner := bluemonday.NewPolicy()
 
 	for _, item := range parsedFeed.Items {
+		if strings.HasPrefix(item.Title, "[Advertorial]") {
+			continue
+		}
+
 		feedItem := &FeedItem{
-			FeedID:  feed.ID,
+			ID:      generateUUID(),
 			Created: time.Now(),
 			Updated: time.Now(),
 			Title:   item.Title,
 			URL:     item.Link,
-		}
-
-		if strings.HasPrefix(feedItem.Title, "[Advertorial]") {
-			continue
 		}
 
 		if feedItem.Content != "" {
@@ -138,7 +121,7 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 			continue
 		}
 
-		*feedItems = append(*feedItems, feedItem)
+		feed.Items = append(feed.Items, feedItem)
 	}
 
 	if parsedFeed.Updated != "" {
@@ -155,9 +138,36 @@ func (feed *Feed) Fetch(feedItems *[]*FeedItem) error {
 	return nil
 }
 
+// GetItem gets an item by ID from this feed list of items
+func (feed *Feed) GetItem(ID string) *FeedItem {
+	for _, item := range feed.Items {
+		if ID == item.ID {
+			return item
+		}
+	}
+
+	return nil
+}
+
+// DeleteItem removes an item by ID from this feed list of items
+func (feed *Feed) DeleteItem(ID string) error {
+	for i, item := range feed.Items {
+		if ID != item.ID {
+			continue
+		}
+
+		feed.Items = append(feed.Items[:i], feed.Items[i+1:]...)
+
+		return nil
+	}
+
+	return ErrNotExistingFeedItem
+}
+
 // ListFeedsOptions is used to pass filters to ListFeeds
 type ListFeedsOptions struct {
 	Search            string
+	Tags              Tags
 	NotRefreshedSince time.Time
 	Limit             int
 	Offset            int
@@ -165,31 +175,43 @@ type ListFeedsOptions struct {
 
 // ListFeeds fetches multiple feeds from the database
 func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
-	query := store.db.Select("feeds f")
+	query := store.db.Select("feeds")
 
 	if options.Search != "" {
-		query.Where("(f.title LIKE ? OR f.url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("(title LIKE ? OR url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
 	}
 
 	if !options.NotRefreshedSince.IsZero() {
-		query.Where("f.refreshed < ?", options.NotRefreshedSince)
+		query.Where("refreshed < ?", options.NotRefreshedSince)
+	}
+
+	for _, tag := range options.Tags {
+		if tag == "" {
+			continue
+		} else if strings.HasPrefix(tag, "-") {
+			query.Where("NOT EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", strings.TrimPrefix(tag, "-"))
+		} else {
+			query.Where("EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", tag)
+		}
 	}
 
 	feeds := []*Feed{}
 	totalCount := 0
 
-	query.Columns("COUNT(f.id)")
-	query.LoadValue(&totalCount)
+	query.Columns("COUNT(id)")
+	if err := query.LoadValue(&totalCount); err != nil {
+		log.Warn().Err(err).Msg("Error fetching feed count")
+		return &feeds, 0
+	}
 
-	query.Join("LEFT JOIN items i ON i.feed_id = f.id")
-	query.GroupBy("f.id")
-
-	query.Columns("f.*", "COUNT(i.id) AS items")
-	query.OrderBy("COUNT(i.id)", "DESC")
-	query.OrderBy("f.last_authored", "DESC")
+	query.Columns("*")
+	query.OrderBy("last_authored", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
-	query.Load(&feeds)
+	if _, err := query.Load(&feeds); err != nil {
+		log.Warn().Err(err).Msg("Error fetching feeds")
+		return &feeds, 0
+	}
 
 	return &feeds, totalCount
 }
@@ -199,12 +221,12 @@ func (store *Store) GetFeed(feed *Feed) error {
 	query := store.db.Select("feeds")
 	query.Limit(1)
 
-	if feed.ID != 0 {
+	if feed.ID != "" {
 		query.Where("id = ?", feed.ID)
 	} else if feed.URL != "" {
 		query.Where("url = ?", feed.URL)
 	} else {
-		return ErrNoPrimaryKey
+		return ErrNoFeedKey
 	}
 
 	if err := query.LoadValue(&feed); err != nil {
@@ -214,126 +236,99 @@ func (store *Store) GetFeed(feed *Feed) error {
 	return nil
 }
 
-// AddFeed persists a feed to the database and schedules an async job to fetch the content
-func (store *Store) AddFeed(feed *Feed) error {
-	if feed.ID != 0 {
-		return ErrExistingFeed
+// PersistFeed persists a feed to the database and schedules an async job to fetch the content
+func (store *Store) PersistFeed(feed *Feed) error {
+	if feed.URL == "" {
+		return ErrNoFeedURL
 	}
 
 	if feed.Title == "" {
 		feed.Title = feed.URL
 	}
 
-	if err := feed.Validate(); err != nil {
-		return err
+	if feed.Created.IsZero() {
+		feed.Created = time.Now()
 	}
 
-	feed.Created = time.Now()
+	if feed.Refreshed.IsZero() {
+		feed.Refreshed = time.Now().Add(time.Hour * 24 * 7 * -1) // For new feeds, fetch articles of last 7 days
+	}
+
 	feed.Updated = time.Now()
-	feed.Refreshed = time.Now().Add(time.Hour * 24 * 7 * -1) // For new feeds, fetch articles of last 7 days
 
-	query := store.db.Insert("feeds")
-	query.Columns("created", "updated", "refreshed", "title", "url")
-	query.Record(feed)
+	if feed.ID == "" {
+		feed.ID = generateUUID()
 
-	logger := log.With().Str("title", feed.Title).Str("url", feed.URL).Logger()
+		query := store.db.Insert("feeds")
+		query.Columns("id", "created", "etag", "items", "last_authored", "refreshed", "tags", "title", "updated", "url")
+		query.OnConflict("url", "etag=excluded.etag, items=excluded.items, last_authored=excluded.last_authored, refreshed=excluded.refreshed, tags=excluded.tags, title=excluded.title, updated=excluded.updated")
+		// query.Returning("id") TODO this does not work in combination with on conflict
+		query.Record(feed)
 
-	if _, err := query.Exec(); err != nil {
-		if exists := err.(sqlite3.Error).ExtendedCode == sqlite3.ErrConstraintUnique; exists {
-			// TODO get the existing feed from the database to fill the Feed.ID field properly
-			logger.Info().Msg("Feed already exists")
-			return nil
+		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error creating feed")
+			return err
 		}
+	} else {
+		query := store.db.Update("feeds")
+		query.Set("etag", feed.Etag)
+		query.Set("items", feed.Items)
+		query.Set("last_authored", feed.LastAuthored)
+		query.Set("refreshed", feed.Refreshed)
+		query.Set("tags", feed.Tags)
+		query.Set("title", feed.Title)
+		query.Set("updated", feed.Updated)
+		query.Set("url", feed.URL)
+		query.Where("id = ?", feed.ID)
 
-		logger.Error().Err(err).Msg("Error persisting feed")
-		return err
+		if _, err := query.Exec(); err != nil {
+			log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error updating feed")
+			return err
+		}
 	}
 
-	logger.Info().Msg("Persisted feed")
-
-	return nil
-}
-
-// UpdateFeed updates the given feed
-func (store *Store) UpdateFeed(feed *Feed) error {
-	if feed.ID == 0 {
-		return ErrNotExistingFeed
-	}
-
-	if err := feed.Validate(); err != nil {
-		return err
-	}
-
-	feed.Updated = time.Now()
-
-	query := store.db.Update("feeds")
-	query.Set("updated", feed.Updated)
-	query.Set("refreshed", feed.Refreshed)
-	query.Set("last_authored", feed.LastAuthored)
-	query.Set("title", feed.Title)
-	query.Set("url", feed.URL)
-	query.Set("etag", feed.Etag)
-	query.Where("id = ?", feed.ID)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
+	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Persisted feed")
 
 	return nil
 }
 
 // DeleteFeed deletes the given feed from the database
 func (store *Store) DeleteFeed(feed *Feed) error {
-	if feed.ID == 0 {
-		return ErrNotExistingFeed
+	if feed.ID == "" && feed.URL == "" {
+		return ErrNoFeedKey
 	}
 
-	query := store.db.Delete("items")
-	query.Where("feed_id = ?", feed.ID)
+	query := store.db.Delete("feeds")
+
+	if feed.ID != "" {
+		query.Where("id = ?", feed.ID)
+	}
+
+	if feed.Title != "" {
+		query.Where("url = ?", feed.URL)
+	}
 
 	if _, err := query.Exec(); err != nil {
+		log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error deleting feed")
 		return err
 	}
 
-	query = store.db.Delete("feeds")
-	query.Where("id = ?", feed.ID)
-
-	if _, err := query.Exec(); err != nil {
-		return err
-	}
+	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed deleted")
 
 	return nil
 }
 
 // RefreshFeed fetches the rss feed items and persists those to the database
 func (store *Store) RefreshFeed(feed *Feed) error {
-	if feed.ID == 0 {
-		return ErrNotExistingFeed
-	}
-
-	logger := log.With().Str("url", feed.URL).Logger()
-
-	feedItems := []*FeedItem{}
-	if err := feed.Fetch(&feedItems); err != nil {
-		logger.Warn().Err(err).Msg("Unable to fetch feed")
+	if err := feed.Fetch(); err != nil {
 		return err
 	}
 
-	for _, item := range feedItems {
-		if err := store.AddFeedItem(item); err != nil {
-			logger.Warn().Err(err).Str("feed_item_title", item.Title).Msg("Unable to persist feed item")
-			continue
-		}
-
-		logger.Info().Str("feed_item_title", item.Title).Msg("Persisted feed item")
-	}
-
-	if err := store.UpdateFeed(feed); err != nil {
-		logger.Warn().Err(err).Msg("Error updating feed")
+	if err := store.PersistFeed(feed); err != nil {
 		return err
 	}
 
-	logger.Info().Msg("Feed updated")
+	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed refreshed")
 
 	return nil
 }
