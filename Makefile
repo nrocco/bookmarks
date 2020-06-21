@@ -85,6 +85,10 @@ coverage:
 	go test -covermode=count -coverprofile=coverage/coverage.out ./...
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
 
+.PHONY: test
+test:
+	go test ./...
+
 .PHONY: container
 container:
 	docker build \
@@ -94,5 +98,6 @@ container:
 		--tag "$(DOCKER_IMAGE):latest" \
 		.
 
+.PHONY: push
 push:
 	docker push "$(DOCKER_IMAGE):latest"
