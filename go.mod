@@ -1,6 +1,7 @@
 module github.com/nrocco/bookmarks
 
 require (
+	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-shiori/dom v0.0.0-20200611094855-2cf8a4b8b9eb // indirect
