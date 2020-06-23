@@ -84,9 +84,8 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 		query.Where("archived = ?", false)
 	}
 
-	// TODO add back full text search here: query.Where("id IN (SELECT rowid FROM bookmarks_fts(?))", options.Search) // TODO rowid does not work with string ID's
 	if options.Search != "" {
-		query.Where("(title LIKE ? OR url LIKE ? OR content LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("rowid IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
 	}
 
 	for _, tag := range options.Tags {
