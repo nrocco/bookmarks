@@ -39,7 +39,7 @@ func (store *Store) ListThoughts(options *ListThoughtsOptions) (*[]*Thought, int
 	query := store.db.Select("thoughts")
 
 	if options.Search != "" {
-		query.Where("title LIKE ? OR content LIKE ?", "%"+options.Search+"%", "%"+options.Search+"%")
+		query.Where("rowid IN (SELECT rowid FROM thoughts_fts(?))", options.Search)
 	}
 
 	for _, tag := range options.Tags {
@@ -99,12 +99,12 @@ func (store *Store) PersistThought(thought *Thought) error {
 		return ErrNoThoughtTitle
 	}
 
-	if thought.ID == "" {
-		thought.ID = generateUUID()
-	}
-
 	if thought.Created.IsZero() {
 		thought.Created = time.Now()
+	}
+
+	if thought.Tags == nil {
+		thought.Tags = Tags{}
 	}
 
 	thought.Updated = time.Now()

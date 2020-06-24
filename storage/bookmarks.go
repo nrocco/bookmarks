@@ -153,6 +153,10 @@ func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 		bookmark.Created = time.Now()
 	}
 
+	if bookmark.Tags == nil {
+		bookmark.Tags = Tags{}
+	}
+
 	bookmark.Updated = time.Now()
 
 	if bookmark.ID == "" {

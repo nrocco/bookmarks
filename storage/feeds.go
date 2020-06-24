@@ -107,6 +107,10 @@ func (feed *Feed) Fetch() error {
 			feedItem.Content = textCleaner.Sanitize(item.Description)
 		}
 
+		if len(feedItem.Content) > 300 {
+			feedItem.Content = feedItem.Content[0:300]
+		}
+
 		if item.PublishedParsed != nil {
 			feedItem.Date = *item.PublishedParsed
 		} else if item.UpdatedParsed != nil {
@@ -252,6 +256,10 @@ func (store *Store) PersistFeed(feed *Feed) error {
 
 	if feed.Refreshed.IsZero() {
 		feed.Refreshed = time.Now().Add(time.Hour * 24 * 7 * -1) // For new feeds, fetch articles of last 7 days
+	}
+
+	if feed.Tags == nil {
+		feed.Tags = Tags{}
 	}
 
 	feed.Updated = time.Now()

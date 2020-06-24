@@ -63,6 +63,7 @@ func (api *thoughts) middleware(next http.Handler) http.Handler {
 func (api *thoughts) getThought(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
+	w.Header().Set("X-ID", thought.ID)
 	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Updated", thought.Updated.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Tags", strings.Join(thought.Tags, ","))
