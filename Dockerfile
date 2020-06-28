@@ -1,10 +1,11 @@
-FROM golang:alpine as gobase
+FROM golang:alpine AS gobase
 RUN apk add --no-cache \
         ca-certificates \
         gcc \
         git \
         musl-dev \
-        sqlite
+        sqlite \
+    && true
 RUN env GO111MODULE=on go get -u \
         github.com/cortesi/modd/cmd/modd \
         github.com/kevinburke/go-bindata/... \

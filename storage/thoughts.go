@@ -109,13 +109,14 @@ func (store *Store) PersistThought(thought *Thought) error {
 
 	thought.Updated = time.Now()
 
+	// Check if there is already a thought with the same Title in the database
+	store.db.Select("thoughts").Columns("id", "created").Where("title = ?", thought.Title).Limit(1).LoadValue(&thought)
+
 	if thought.ID == "" {
 		thought.ID = generateUUID()
 
 		query := store.db.Insert("thoughts")
 		query.Columns("id", "title", "created", "content", "tags", "updated")
-		query.OnConflict("title", "content=excluded.content, tags=excluded.tags, updated=excluded.updated")
-		// query.Returning("id") TODO this does not work in combination with on conflict
 		query.Record(thought)
 
 		if _, err := query.Exec(); err != nil {

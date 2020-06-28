@@ -159,13 +159,14 @@ func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 
 	bookmark.Updated = time.Now()
 
+	// Check if there is already a bookmark with the same URL in the database
+	store.db.Select("bookmarks").Columns("id", "created").Where("url = ?", bookmark.URL).Limit(1).LoadValue(&bookmark)
+
 	if bookmark.ID == "" {
 		bookmark.ID = generateUUID()
 
 		query := store.db.Insert("bookmarks")
 		query.Columns("id", "archived", "created", "content", "excerpt", "tags", "title", "updated", "url")
-		query.OnConflict("url", "archived=excluded.archived, content=excluded.content, excerpt=excluded.excerpt, tags=excluded.tags, title=excluded.title, updated=excluded.updated")
-		// query.Returning("id") TODO this does not work in combination with on conflict
 		query.Record(bookmark)
 
 		if _, err := query.Exec(); err != nil {

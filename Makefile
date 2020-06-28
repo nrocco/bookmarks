@@ -2,10 +2,10 @@
 
 BIN ?= bookmarks
 REPO ?= nrocco/bookmarks
-PKG ?= github.com/$(REPO)
+PKG ?= github.com/nrocco/bookmarks
 DOCKER_IMAGE = nrocco/bookmarks
 
-CGO_ENABLED ?= 0
+CGO_ENABLED ?= 1
 BUILD_GOOS ?= $(shell go env GOOS)
 BUILD_GOARCH ?= $(shell go env GOARCH)
 BUILD_VERSION ?= $(shell git describe --tags --always --dirty)
@@ -72,8 +72,10 @@ release: archive-all
 
 .PHONY: lint
 lint:
+	git ls-files | xargs misspell -error
 	golint -set_exit_status ./...
 	go vet -v ./...
+	errcheck -blank -asserts ./...
 
 .PHONY: test
 test:

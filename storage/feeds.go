@@ -264,13 +264,14 @@ func (store *Store) PersistFeed(feed *Feed) error {
 
 	feed.Updated = time.Now()
 
+	// Check if there is already a feed with the same URL in the database
+	store.db.Select("feeds").Columns("id", "created").Where("url = ?", feed.URL).Limit(1).LoadValue(&feed)
+
 	if feed.ID == "" {
 		feed.ID = generateUUID()
 
 		query := store.db.Insert("feeds")
 		query.Columns("id", "created", "etag", "items", "last_authored", "refreshed", "tags", "title", "updated", "url")
-		query.OnConflict("url", "etag=excluded.etag, items=excluded.items, last_authored=excluded.last_authored, refreshed=excluded.refreshed, tags=excluded.tags, title=excluded.title, updated=excluded.updated")
-		// query.Returning("id") TODO this does not work in combination with on conflict
 		query.Record(feed)
 
 		if _, err := query.Exec(); err != nil {

@@ -28,7 +28,7 @@ END;
 
 CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
 	INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, url, content) VALUES('delete', old.rowid, old.title, old.url, old.content);
-	INSERT INTO bookmarks_fts(rowid, title, url, content) VALUES (new.id, new.title, new.url, new.content);
+	INSERT INTO bookmarks_fts(rowid, title, url, content) VALUES (new.rowid, new.title, new.url, new.content);
 END;
 
 CREATE TABLE IF NOT EXISTS feeds (
@@ -73,7 +73,7 @@ END;
 
 CREATE TRIGGER IF NOT EXISTS thoughts_au AFTER UPDATE ON thoughts BEGIN
 	INSERT INTO thoughts_fts(thoughts_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
-	INSERT INTO thoughts_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
+	INSERT INTO thoughts_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
 END;
 
 COMMIT;
