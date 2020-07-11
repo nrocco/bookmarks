@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -138,6 +139,10 @@ func (feed *Feed) Fetch() error {
 	if feed.Title == "" {
 		feed.Title = parsedFeed.Title
 	}
+
+	sort.SliceStable(feed.Items, func(i, j int) bool {
+		return feed.Items[i].Date.After(feed.Items[j].Date)
+	})
 
 	return nil
 }

@@ -79,17 +79,27 @@ export default {
 
   computed: {
     items () {
-      const selectedFeed = this.selectedFeed
-      if (selectedFeed) {
-        return selectedFeed.Items.map(item => {
-          item.Feed = selectedFeed
+      let items
+      if (this.selectedFeed) {
+        items = this.selectedFeed.Items.map(item => {
+          item.Feed = this.selectedFeed
           return item
         })
+      } else {
+        items = this.feeds.map(feed => feed.Items.map(item => {
+          item.Feed = feed
+          return item
+        })).flat()
       }
-      return this.feeds.map(feed => feed.Items.map(item => {
-        item.Feed = feed
-        return item
-      })).flat()
+      return items.sort((a, b) => {
+        if (a.Date > b.Date) {
+          return -1
+        } else if (a.Date < b.Date) {
+          return 1
+        } else {
+          return 0
+        }
+      })
     },
     isIphone () {
       return window.navigator.userAgent.includes('iPhone')
