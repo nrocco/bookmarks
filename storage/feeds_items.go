@@ -42,10 +42,10 @@ func (i *FeedItem) Scan(value interface{}) error {
 }
 
 // ToBookmark converts the feed item to a bookmark
-func (item *FeedItem) ToBookmark() *Bookmark {
+func (i *FeedItem) ToBookmark() *Bookmark {
 	return &Bookmark{
-		Title:   item.Title,
-		URL:     item.URL,
-		Content: item.Content,
+		Title:   i.Title,
+		URL:     i.URL,
+		Content: i.Content,
 	}
 }
