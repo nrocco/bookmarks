@@ -47,7 +47,8 @@ RUN go build -v -o bookmarks \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${COMMIT} \
-            -X github.com/nrocco/bookmarks/cmd.date=${DATE}"
+            -X github.com/nrocco/bookmarks/cmd.date=${DATE} \
+            -s -w"
 
 
 

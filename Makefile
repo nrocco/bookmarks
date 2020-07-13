@@ -26,7 +26,7 @@ dist/$(BUILD_NAME)/bin/$(BIN):
 	env GOOS=$(BUILD_GOOS) GOARCH=$(BUILD_GOARCH) CGO_ENABLED=$(CGO_ENABLED) go build \
 		-v \
 		-o "$@" \
-		-ldflags "-X ${PKG}/cmd.version=${BUILD_VERSION} -X ${PKG}/cmd.commit=${BUILD_COMMIT} -X ${PKG}/cmd.date=${BUILD_DATE}"
+		-ldflags "-X ${PKG}/cmd.version=${BUILD_VERSION} -X ${PKG}/cmd.commit=${BUILD_COMMIT} -X ${PKG}/cmd.date=${BUILD_DATE} -s -w"
 
 
 dist/$(BUILD_NAME).tar.gz: dist/$(BUILD_NAME)/bin/$(BIN) dist/completion.zsh bin/* LICENSE README.md
