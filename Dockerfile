@@ -1,3 +1,4 @@
+# syntax = docker/dockerfile:1-experimental
 FROM golang:alpine AS gobase
 RUN apk add --no-cache \
         ca-certificates \
@@ -16,33 +17,33 @@ WORKDIR /src
 
 FROM node:alpine AS nodebase
 RUN npm install -g @vue/cli
-WORKDIR /src
+WORKDIR /src/web
 
 
 
 FROM nodebase AS nodebuilder
-WORKDIR /src
-COPY web/package*.json /src/
+COPY web/package*.json /src/web/
 RUN yarn install --no-progress
-COPY web/ /src/
+COPY web/ /src/web/
 RUN yarn run lint --no-progress
 RUN yarn run build --no-progress --production
 
 
 
 FROM gobase AS gobuilder
-WORKDIR /src
+ENV CGO_ENABLED=1
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/root/.cache/go-build go mod download
 COPY . ./
-COPY --from=nodebuilder /src/dist/ ./web/dist/
-RUN go generate -v api/api.go
-ARG VERSION=unknown
+COPY --from=nodebuilder /src/web/dist/ ./web/dist/
+RUN --mount=type=cache,target=/root/.cache/go-build go generate -v api/api.go
+ARG VERSION=docker
 ARG COMMIT=unknown
 ARG DATE=unknown
-RUN go vet ./...
-RUN golint ./...
-RUN go build -v -o bookmarks \
+RUN --mount=type=cache,target=/root/.cache/go-build go vet -v ./...
+RUN --mount=type=cache,target=/root/.cache/go-build golint ./...
+# RUN go test -v -covermode=count ./...
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o bookmarks \
         --tags "json1 fts5" \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${VERSION} \

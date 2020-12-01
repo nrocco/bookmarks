@@ -5,16 +5,18 @@ services:
     build:
       context: .
       target: nodebase
-    command: ["sh", "-c", "yarn install && yarn run serve"]
+    init: true
+    command: ["yarn", "run", "serve"]
     ports:
       - "8080:8080"
     volumes:
-      - "./web:/src"
-      - "node_cache:/src/node_modules"
+      - "./web:/src/web"
+      - "node_cache:/src/web/node_modules"
   backend:
     build:
       context: .
       target: gobase
+    init: true
     command: ["modd", "--debug"]
     ports:
       - "3000:3000"

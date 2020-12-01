@@ -52,8 +52,8 @@
     <div class="block feed-item" v-for="item in items" :key="item.ID">
       <p class="has-text-weight-bold">{{ item.Title }}</p>
       <p class="is-size-7"><a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a></p>
-      <p class="content"><i>{{ item.Date|moment("from", "now") }}</i> - {{ item.Content }}&#8230;</p>
-      <p class="buttons">
+      <p><i>{{ item.Date|moment("from", "now") }}</i></p>
+      <p class="content"><span v-html="item.Content" /></p>
       <div class="field is-grouped">
         <p class="control"><a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a></p>
         <span class="is-button-pusher" />

@@ -87,7 +87,7 @@ func (feed *Feed) Fetch() error {
 
 	logger.Info().Int("items", len(parsedFeed.Items)).Msg("Found items in Feed")
 
-	textCleaner := bluemonday.NewPolicy()
+	textCleaner := bluemonday.UGCPolicy()
 
 	for _, item := range parsedFeed.Items {
 		if strings.HasPrefix(item.Title, "[Advertorial]") {
@@ -102,14 +102,10 @@ func (feed *Feed) Fetch() error {
 			URL:     item.Link,
 		}
 
-		if feedItem.Content != "" {
+		if item.Content != "" {
 			feedItem.Content = textCleaner.Sanitize(item.Content)
 		} else {
 			feedItem.Content = textCleaner.Sanitize(item.Description)
-		}
-
-		if len(feedItem.Content) > 300 {
-			feedItem.Content = feedItem.Content[0:300]
 		}
 
 		if item.PublishedParsed != nil {
