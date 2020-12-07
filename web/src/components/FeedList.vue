@@ -49,16 +49,20 @@
 
     <hr/>
 
-    <div class="block feed-item" v-for="item in items" :key="item.ID">
-      <p class="has-text-weight-bold">{{ item.Title }}</p>
-      <p class="is-size-7"><a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a></p>
-      <p><i>{{ item.Date|moment("from", "now") }}</i></p>
-      <p class="content"><span v-html="item.Content" /></p>
-      <div class="field is-grouped">
-        <p class="control"><a @click.prevent="onRemoveClicked(item)" class="button is-small is-danger is-outlined">Remove</a></p>
-        <span class="is-button-pusher" />
-        <p class="control"><a @click.prevent="onReadItLaterClicked(item)" class="button is-small is-primary">Read it later</a></p>
+    <div class="feed-item card mt-5" v-for="item in items" :key="item.ID">
+      <div class="card-content">
+        <p class="title is-4">
+          {{ item.Title }}
+        </p>
+        <p class="subtitle is-6">
+          <time>{{ item.Date|moment("from", "now") }}</time> - <a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a>
+        </p>
+        <div class="content is-small" v-html="item.Content"></div>
       </div>
+      <footer class="card-footer">
+        <a @click.prevent="onRemoveClicked(item)" class="card-footer-item">Remove</a>
+        <a @click.prevent="onReadItLaterClicked(item)" class="card-footer-item">Read it later</a>
+      </footer>
     </div>
   </div>
 </template>
@@ -167,23 +171,23 @@ export default {
 </script>
 
 <style>
-.feed-item {
-  border-bottom: 1px solid hsl(0, 0%, 96%);
-  padding-bottom: 1.5rem;
-}
 .feed-item .url {
   word-break: break-all;
 }
-.content:not(:last-child) {
-  margin-bottom: 0.5rem;
+.feed-item .content {
+  max-height: 200px;
+  overflow-y: hidden;
+}
+.feed-item .content h1,
+.feed-item .content h2,
+.feed-item .content h3,
+.feed-item .content h4 {
+  font-size: 1rem;
 }
 .select {
   width: 100%;
 }
 .select select {
-  width: 100%;
-}
-.is-button-pusher {
   width: 100%;
 }
 </style>
