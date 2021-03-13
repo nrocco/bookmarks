@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,7 +40,7 @@ func (api feeds) Routes() chi.Router {
 }
 
 func (api *feeds) listFeed(w http.ResponseWriter, r *http.Request) {
-	feeds, totalCount := api.store.ListFeeds(&storage.ListFeedsOptions{
+	feeds, totalCount := api.store.ListFeeds(r.Context(), &storage.ListFeedsOptions{
 		Search: r.URL.Query().Get("q"),
 		Tags:   strings.Split(r.URL.Query().Get("tags"), ","),
 		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
@@ -60,17 +59,17 @@ func (api *feeds) createFeed(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := decoder.Decode(&feed); err != nil {
-		jsonError(w, err, 400)
+		jsonError(w, err.Error(), 400)
 		return
 	}
 
-	if err := api.store.PersistFeed(&feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistFeed(r.Context(), &feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	if err := api.store.RefreshFeed(&feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.RefreshFeed(r.Context(), &feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -81,8 +80,8 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		feed := storage.Feed{ID: chi.URLParam(r, "id")}
 
-		if err := api.store.GetFeed(&feed); err != nil {
-			jsonError(w, errors.New("Feed Not Found"), 404)
+		if err := api.store.GetFeed(r.Context(), &feed); err != nil {
+			jsonError(w, "Feed Not Found", 404)
 			return
 		}
 
@@ -94,8 +93,8 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 func (api *feeds) refreshFeed(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	if err := api.store.RefreshFeed(feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.RefreshFeed(r.Context(), feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -115,12 +114,12 @@ func (api *feeds) updateFeed(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := decoder.Decode(feed); err != nil {
-		jsonError(w, err, 400)
+		jsonError(w, err.Error(), 400)
 		return
 	}
 
-	if err := api.store.PersistFeed(feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -130,8 +129,8 @@ func (api *feeds) updateFeed(w http.ResponseWriter, r *http.Request) {
 func (api *feeds) deleteFeed(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	if err := api.store.DeleteFeed(feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.DeleteFeed(r.Context(), feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -143,29 +142,29 @@ func (api *feeds) readLaterFeedItem(w http.ResponseWriter, r *http.Request) {
 	item := feed.GetItem(chi.URLParam(r, "id"))
 
 	if item == nil {
-		jsonError(w, errors.New("Item Not Found"), 404)
+		jsonError(w, "Item Not Found", 404)
 		return
 	}
 
 	bookmark := item.ToBookmark()
 
-	if err := bookmark.Fetch(); err != nil {
-		jsonError(w, err, 500)
+	if err := bookmark.Fetch(r.Context()); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	if err := api.store.PersistBookmark(bookmark); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistBookmark(r.Context(), bookmark); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
 	if err := feed.DeleteItem(item.ID); err != nil {
-		jsonError(w, err, 404)
+		jsonError(w, err.Error(), 404)
 		return
 	}
 
-	if err := api.store.PersistFeed(feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -176,12 +175,12 @@ func (api *feeds) deleteFeedItem(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
 	if err := feed.DeleteItem(chi.URLParam(r, "id")); err != nil {
-		jsonError(w, err, 404)
+		jsonError(w, err.Error(), 404)
 		return
 	}
 
-	if err := api.store.PersistFeed(feed); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 

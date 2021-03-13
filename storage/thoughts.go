@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -26,17 +27,17 @@ type Thought struct {
 	Tags    Tags
 }
 
-// ListThoughtsOptions can be passed to ListThoughts to filter thoughts
-type ListThoughtsOptions struct {
+// ThoughtListOptions can be passed to ThoughtList to filter thoughts
+type ThoughtListOptions struct {
 	Search string
 	Tags   Tags
 	Limit  int
 	Offset int
 }
 
-// ListThoughts lists thoughts from the database
-func (store *Store) ListThoughts(options *ListThoughtsOptions) (*[]*Thought, int) {
-	query := store.db.Select("thoughts")
+// ThoughtList lists thoughts from the database
+func (store *Store) ThoughtList(ctx context.Context, options *ThoughtListOptions) (*[]*Thought, int) {
+	query := store.db.Select(ctx).From("thoughts")
 
 	if options.Search != "" {
 		query.Where("rowid IN (SELECT rowid FROM thoughts_fts(?))", options.Search)
@@ -57,7 +58,7 @@ func (store *Store) ListThoughts(options *ListThoughtsOptions) (*[]*Thought, int
 
 	query.Columns("COUNT(id)")
 	if err := query.LoadValue(&totalCount); err != nil {
-		log.Warn().Err(err).Msg("Error fetching thought count")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching thought count")
 		return &thoughts, 0
 	}
 
@@ -66,16 +67,16 @@ func (store *Store) ListThoughts(options *ListThoughtsOptions) (*[]*Thought, int
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	if _, err := query.Load(&thoughts); err != nil {
-		log.Warn().Err(err).Msg("Error fetching thoughts")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching thoughts")
 		return &thoughts, 0
 	}
 
 	return &thoughts, totalCount
 }
 
-// GetThought gets a single thought from the database
-func (store *Store) GetThought(thought *Thought) error {
-	query := store.db.Select("thoughts")
+// ThoughtGet gets a single thought from the database
+func (store *Store) ThoughtGet(ctx context.Context, thought *Thought) error {
+	query := store.db.Select(ctx).From("thoughts")
 	query.Limit(1)
 
 	if thought.ID != "" {
@@ -93,8 +94,8 @@ func (store *Store) GetThought(thought *Thought) error {
 	return nil
 }
 
-// PersistThought adds a thought to the database
-func (store *Store) PersistThought(thought *Thought) error {
+// ThoughtPersist adds a thought to the database
+func (store *Store) ThoughtPersist(ctx context.Context, thought *Thought) error {
 	if thought.Title == "" {
 		return ErrNoThoughtTitle
 	}
@@ -110,21 +111,21 @@ func (store *Store) PersistThought(thought *Thought) error {
 	thought.Updated = time.Now()
 
 	// Check if there is already a thought with the same Title in the database
-	store.db.Select("thoughts").Columns("id", "created").Where("title = ?", thought.Title).Limit(1).LoadValue(&thought)
+	store.db.Select(ctx).From("thoughts").Columns("id", "created").Where("title = ?", thought.Title).Limit(1).LoadValue(&thought)
 
 	if thought.ID == "" {
 		thought.ID = generateUUID()
 
-		query := store.db.Insert("thoughts")
+		query := store.db.Insert(ctx).InTo("thoughts")
 		query.Columns("id", "title", "created", "content", "tags", "updated")
 		query.Record(thought)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error persisting thought")
+			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error persisting thought")
 			return err
 		}
 	} else {
-		query := store.db.Update("thoughts")
+		query := store.db.Update(ctx).Table("thoughts")
 		query.Set("content", thought.Content)
 		query.Set("tags", thought.Tags)
 		query.Set("title", thought.Title)
@@ -132,23 +133,23 @@ func (store *Store) PersistThought(thought *Thought) error {
 		query.Where("id = ?", thought.ID)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error updating thought")
+			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error updating thought")
 			return err
 		}
 	}
 
-	log.Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Persisted thought")
+	log.Ctx(ctx).Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Persisted thought")
 
 	return nil
 }
 
-// DeleteThought removes a thought from the database
-func (store *Store) DeleteThought(thought *Thought) error {
+// ThoughtDelete removes a thought from the database
+func (store *Store) ThoughtDelete(ctx context.Context, thought *Thought) error {
 	if thought.ID == "" && thought.Title == "" {
 		return ErrNoThoughtKey
 	}
 
-	query := store.db.Delete("thoughts")
+	query := store.db.Delete(ctx).From("thoughts")
 
 	if thought.ID != "" {
 		query.Where("id = ?", thought.ID)
@@ -159,11 +160,11 @@ func (store *Store) DeleteThought(thought *Thought) error {
 	}
 
 	if _, err := query.Exec(); err != nil {
-		log.Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error deleting thought")
+		log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error deleting thought")
 		return err
 	}
 
-	log.Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Thought refreshed")
+	log.Ctx(ctx).Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Thought refreshed")
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"path/filepath"
@@ -8,28 +9,29 @@ import (
 
 	"github.com/nrocco/qb"
 
-	// Store uses sqlite3 for its database
-	_ "github.com/mattn/go-sqlite3"
+	// Store uses sqlite for its database
+	_ "modernc.org/sqlite"
 )
 
 const (
-	databaseFile = "data.db"
 	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15"
 )
 
-func qbLogger(format string, v ...interface{}) {
-}
-
 // New returns a new instance of a Bookmarks Store
 func New(path string) (*Store, error) {
-	db, err := qb.Open(filepath.Join(path, fmt.Sprintf("%s?_foreign_keys=yes", databaseFile)), qbLogger)
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return &Store{}, err
+	}
+
+	db, err := qb.Open(context.TODO(), filepath.Join(path, "data.db"))
 	if err != nil {
 		return &Store{}, err
 	}
 
 	store := Store{db, path}
 
-	if err := store.migrate(); err != nil {
+	if err := store.migrate(context.TODO()); err != nil {
 		return &Store{}, err
 	}
 

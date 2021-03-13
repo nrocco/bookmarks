@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"sort"
@@ -38,12 +39,12 @@ type Feed struct {
 }
 
 // Fetch fetches new items from the given Feed
-func (feed *Feed) Fetch() error {
+func (feed *Feed) Fetch(ctx context.Context) error {
 	if feed.URL == "" {
 		return ErrNoFeedURL
 	}
 
-	logger := log.With().Str("id", feed.ID).Str("url", feed.URL).Logger()
+	logger := log.Ctx(ctx).With().Str("id", feed.ID).Str("url", feed.URL).Logger()
 
 	logger.Info().Msg("Fetching feed")
 
@@ -179,8 +180,8 @@ type ListFeedsOptions struct {
 }
 
 // ListFeeds fetches multiple feeds from the database
-func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
-	query := store.db.Select("feeds")
+func (store *Store) ListFeeds(ctx context.Context, options *ListFeedsOptions) (*[]*Feed, int) {
+	query := store.db.Select(ctx).From("feeds")
 
 	if options.Search != "" {
 		query.Where("(title LIKE ? OR url LIKE ?)", "%"+options.Search+"%", "%"+options.Search+"%")
@@ -205,7 +206,7 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 
 	query.Columns("COUNT(id)")
 	if err := query.LoadValue(&totalCount); err != nil {
-		log.Warn().Err(err).Msg("Error fetching feed count")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching feed count")
 		return &feeds, 0
 	}
 
@@ -214,7 +215,7 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	if _, err := query.Load(&feeds); err != nil {
-		log.Warn().Err(err).Msg("Error fetching feeds")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching feeds")
 		return &feeds, 0
 	}
 
@@ -222,8 +223,8 @@ func (store *Store) ListFeeds(options *ListFeedsOptions) (*[]*Feed, int) {
 }
 
 // GetFeed finds a single feed by ID or URL
-func (store *Store) GetFeed(feed *Feed) error {
-	query := store.db.Select("feeds")
+func (store *Store) GetFeed(ctx context.Context, feed *Feed) error {
+	query := store.db.Select(ctx).From("feeds")
 	query.Limit(1)
 
 	if feed.ID != "" {
@@ -242,7 +243,7 @@ func (store *Store) GetFeed(feed *Feed) error {
 }
 
 // PersistFeed persists a feed to the database and schedules an async job to fetch the content
-func (store *Store) PersistFeed(feed *Feed) error {
+func (store *Store) PersistFeed(ctx context.Context, feed *Feed) error {
 	if feed.URL == "" {
 		return ErrNoFeedURL
 	}
@@ -266,21 +267,21 @@ func (store *Store) PersistFeed(feed *Feed) error {
 	feed.Updated = time.Now()
 
 	// Check if there is already a feed with the same URL in the database
-	store.db.Select("feeds").Columns("id", "created").Where("url = ?", feed.URL).Limit(1).LoadValue(&feed)
+	store.db.Select(ctx).From("feeds").Columns("id", "created").Where("url = ?", feed.URL).Limit(1).LoadValue(&feed)
 
 	if feed.ID == "" {
 		feed.ID = generateUUID()
 
-		query := store.db.Insert("feeds")
+		query := store.db.Insert(ctx).InTo("feeds")
 		query.Columns("id", "created", "etag", "items", "last_authored", "refreshed", "tags", "title", "updated", "url")
 		query.Record(feed)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error creating feed")
+			log.Ctx(ctx).Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error creating feed")
 			return err
 		}
 	} else {
-		query := store.db.Update("feeds")
+		query := store.db.Update(ctx).Table("feeds")
 		query.Set("etag", feed.Etag)
 		query.Set("items", feed.Items)
 		query.Set("last_authored", feed.LastAuthored)
@@ -292,23 +293,23 @@ func (store *Store) PersistFeed(feed *Feed) error {
 		query.Where("id = ?", feed.ID)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error updating feed")
+			log.Ctx(ctx).Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error updating feed")
 			return err
 		}
 	}
 
-	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Persisted feed")
+	log.Ctx(ctx).Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Persisted feed")
 
 	return nil
 }
 
 // DeleteFeed deletes the given feed from the database
-func (store *Store) DeleteFeed(feed *Feed) error {
+func (store *Store) DeleteFeed(ctx context.Context, feed *Feed) error {
 	if feed.ID == "" && feed.URL == "" {
 		return ErrNoFeedKey
 	}
 
-	query := store.db.Delete("feeds")
+	query := store.db.Delete(ctx).From("feeds")
 
 	if feed.ID != "" {
 		query.Where("id = ?", feed.ID)
@@ -319,26 +320,26 @@ func (store *Store) DeleteFeed(feed *Feed) error {
 	}
 
 	if _, err := query.Exec(); err != nil {
-		log.Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error deleting feed")
+		log.Ctx(ctx).Error().Err(err).Str("id", feed.ID).Str("url", feed.URL).Msg("Error deleting feed")
 		return err
 	}
 
-	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed deleted")
+	log.Ctx(ctx).Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed deleted")
 
 	return nil
 }
 
 // RefreshFeed fetches the rss feed items and persists those to the database
-func (store *Store) RefreshFeed(feed *Feed) error {
-	if err := feed.Fetch(); err != nil {
+func (store *Store) RefreshFeed(ctx context.Context, feed *Feed) error {
+	if err := feed.Fetch(ctx); err != nil {
 		return err
 	}
 
-	if err := store.PersistFeed(feed); err != nil {
+	if err := store.PersistFeed(ctx, feed); err != nil {
 		return err
 	}
 
-	log.Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed refreshed")
+	log.Ctx(ctx).Info().Str("id", feed.ID).Str("url", feed.URL).Msg("Feed refreshed")
 
 	return nil
 }

@@ -1,7 +1,11 @@
 package storage
 
+import (
+	"context"
+)
+
 const schema = `
-BEGIN;
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS bookmarks (
 	id CHAR(16) PRIMARY KEY,
@@ -46,10 +50,12 @@ CREATE TABLE IF NOT EXISTS feeds (
 
 CREATE TABLE IF NOT EXISTS users (
 	id CHAR(16) PRIMARY KEY,
-	username VARCHAR(64) NOT NULL,
+	created DATE NOT NULL,
+	updated DATE NOT NULL,
+	username VARCHAR(64) NOT NULL UNIQUE,
 	password VARCHAR(255) NOT NULL,
-	token VARCHAR(255) NOT NULL
-);
+	token VARCHAR(255) NOT NULL UNIQUE
+) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS thoughts (
 	id CHAR(16) PRIMARY KEY,
@@ -75,12 +81,23 @@ CREATE TRIGGER IF NOT EXISTS thoughts_au AFTER UPDATE ON thoughts BEGIN
 	INSERT INTO thoughts_fts(thoughts_fts, rowid, title, content) VALUES('delete', old.rowid, old.title, old.content);
 	INSERT INTO thoughts_fts(rowid, title, content) VALUES (new.rowid, new.title, new.content);
 END;
-
-COMMIT;
 `
 
-func (store *Store) migrate() error {
-	_, err := store.db.Exec(schema)
+func (store *Store) migrate(ctx context.Context) error {
+	tx, err := store.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, schema); err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	return err
 }

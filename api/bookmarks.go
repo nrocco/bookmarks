@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,7 +36,7 @@ func (api bookmarks) Routes() chi.Router {
 }
 
 func (api *bookmarks) listBookmark(w http.ResponseWriter, r *http.Request) {
-	bookmarks, totalCount := api.store.ListBookmarks(&storage.ListBookmarksOptions{
+	bookmarks, totalCount := api.store.ListBookmarks(r.Context(), &storage.ListBookmarksOptions{
 		Search:      r.URL.Query().Get("q"),
 		Tags:        strings.Split(r.URL.Query().Get("tags"), ","),
 		ReadItLater: (r.URL.Query().Get("readitlater") == "true"),
@@ -57,17 +56,17 @@ func (api *bookmarks) createBookmark(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := decoder.Decode(&bookmark); err != nil {
-		jsonError(w, err, 400)
+		jsonError(w, err.Error(), 400)
 		return
 	}
 
-	if err := bookmark.Fetch(); err != nil {
-		jsonError(w, err, 500)
+	if err := bookmark.Fetch(r.Context()); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	if err := api.store.PersistBookmark(&bookmark); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistBookmark(r.Context(), &bookmark); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -80,13 +79,13 @@ func (api *bookmarks) saveBookmark(w http.ResponseWriter, r *http.Request) {
 		Archived: false,
 	}
 
-	if err := bookmark.Fetch(); err != nil {
-		jsonError(w, err, 500)
+	if err := bookmark.Fetch(r.Context()); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	if err := api.store.PersistBookmark(&bookmark); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistBookmark(r.Context(), &bookmark); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -97,8 +96,8 @@ func (api *bookmarks) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookmark := storage.Bookmark{ID: chi.URLParam(r, "id")}
 
-		if err := api.store.GetBookmark(&bookmark); err != nil {
-			jsonError(w, errors.New("Bookmark Not Found"), 404)
+		if err := api.store.GetBookmark(r.Context(), &bookmark); err != nil {
+			jsonError(w, "Bookmark Not Found", 404)
 			return
 		}
 
@@ -120,12 +119,12 @@ func (api *bookmarks) updateBookmark(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := decoder.Decode(bookmark); err != nil {
-		jsonError(w, err, 400)
+		jsonError(w, err.Error(), 400)
 		return
 	}
 
-	if err := api.store.PersistBookmark(bookmark); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.PersistBookmark(r.Context(), bookmark); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 
@@ -135,8 +134,8 @@ func (api *bookmarks) updateBookmark(w http.ResponseWriter, r *http.Request) {
 func (api *bookmarks) deleteBookmark(w http.ResponseWriter, r *http.Request) {
 	bookmark := r.Context().Value(contextKeyBookmark).(*storage.Bookmark)
 
-	if err := api.store.DeleteBookmark(bookmark); err != nil {
-		jsonError(w, err, 500)
+	if err := api.store.DeleteBookmark(r.Context(), bookmark); err != nil {
+		jsonError(w, err.Error(), 500)
 		return
 	}
 

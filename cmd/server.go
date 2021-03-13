@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/nrocco/bookmarks/api"
 	"github.com/nrocco/bookmarks/scheduler"
 	"github.com/nrocco/bookmarks/storage"
@@ -13,8 +15,11 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run the Bend web application and rest api",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Info().
+		logger := log.With().Int("pid", os.Getpid()).Logger()
+
+		logger.Info().
 			Bool("debug", viper.GetBool("debug")).
+			Bool("auth", viper.GetBool("auth")).
 			Int("interval", viper.GetInt("interval")).
 			Str("listen", viper.GetString("listen")).
 			Str("storage", viper.GetString("storage")).
@@ -23,25 +28,25 @@ var serverCmd = &cobra.Command{
 		// Setup the database
 		store, err := storage.New(viper.GetString("storage"))
 		if err != nil {
-			log.Fatal().Err(err).Msg("Could not open the database")
+			logger.Fatal().Err(err).Msg("Could not open the database")
 		}
+		logger.Info().Str("storage", viper.GetString("storage")).Msg("Store ready")
 
 		// Setup the http server
-		api := api.New(store, !viper.GetBool("noauth"))
+		api := api.New(logger, store, !viper.GetBool("noauth"))
+		logger.Info().Str("address", "http://"+viper.GetString("listen")).Msg("API ready")
 
 		if viper.GetInt("interval") != 0 {
-			// Setup the periodic scheduler
 			scheduler.New(store, viper.GetInt("interval"))
 		} else {
-			log.Info().Msg("Scheduler is disabled")
+			logger.Info().Msg("Scheduler is disabled")
 		}
 
 		// Run the http server
 		if err := api.ListenAndServe(viper.GetString("listen")); err != nil {
-			log.Warn().Err(err).Msg("Stopped the api server")
+			logger.Warn().Err(err).Msg("Stopped the api server")
 		}
-
-		log.Info().Msg("Stopping bookmarks")
+		logger.Info().Msg("Stopping bookmarks")
 
 		return nil
 	},

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -31,12 +32,12 @@ type Bookmark struct {
 }
 
 // Fetch downloads the bookmark, reduces the result to a readable plain text format
-func (bookmark *Bookmark) Fetch() error {
+func (bookmark *Bookmark) Fetch(ctx context.Context) error {
 	if bookmark.URL == "" {
 		return ErrNoBookmarkURL
 	}
 
-	logger := log.With().Str("id", bookmark.ID).Str("url", bookmark.URL).Logger()
+	logger := log.Ctx(ctx).With().Str("id", bookmark.ID).Str("url", bookmark.URL).Logger()
 
 	logger.Info().Msg("Fetching bookmark")
 
@@ -77,8 +78,8 @@ type ListBookmarksOptions struct {
 }
 
 // ListBookmarks fetches multiple bookmarks from the database
-func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, int) {
-	query := store.db.Select("bookmarks")
+func (store *Store) ListBookmarks(ctx context.Context, options *ListBookmarksOptions) (*[]*Bookmark, int) {
+	query := store.db.Select(ctx).From("bookmarks")
 
 	if options.ReadItLater {
 		query.Where("archived = ?", false)
@@ -103,7 +104,7 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 
 	query.Columns("COUNT(id)")
 	if err := query.LoadValue(&totalCount); err != nil {
-		log.Warn().Err(err).Msg("Error fetching bookmarks count")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching bookmarks count")
 		return &bookmarks, 0
 	}
 
@@ -112,7 +113,7 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	if _, err := query.Load(&bookmarks); err != nil {
-		log.Warn().Err(err).Msg("Error fetching bookmarks")
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching bookmarks")
 		return &bookmarks, 0
 	}
 
@@ -120,8 +121,8 @@ func (store *Store) ListBookmarks(options *ListBookmarksOptions) (*[]*Bookmark, 
 }
 
 // GetBookmark finds a single bookmark by ID or URL
-func (store *Store) GetBookmark(bookmark *Bookmark) error {
-	query := store.db.Select("bookmarks")
+func (store *Store) GetBookmark(ctx context.Context, bookmark *Bookmark) error {
+	query := store.db.Select(ctx).From("bookmarks")
 	query.Limit(1)
 
 	if bookmark.ID != "" {
@@ -140,7 +141,7 @@ func (store *Store) GetBookmark(bookmark *Bookmark) error {
 }
 
 // PersistBookmark persists a bookmark to the database and schedules an async job to fetch the content
-func (store *Store) PersistBookmark(bookmark *Bookmark) error {
+func (store *Store) PersistBookmark(ctx context.Context, bookmark *Bookmark) error {
 	if bookmark.URL == "" {
 		return ErrNoBookmarkURL
 	}
@@ -160,21 +161,21 @@ func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 	bookmark.Updated = time.Now()
 
 	// Check if there is already a bookmark with the same URL in the database
-	store.db.Select("bookmarks").Columns("id", "created").Where("url = ?", bookmark.URL).Limit(1).LoadValue(&bookmark)
+	store.db.Select(ctx).From("bookmarks").Columns("id", "created").Where("url = ?", bookmark.URL).Limit(1).LoadValue(&bookmark)
 
 	if bookmark.ID == "" {
 		bookmark.ID = generateUUID()
 
-		query := store.db.Insert("bookmarks")
+		query := store.db.Insert(ctx).InTo("bookmarks")
 		query.Columns("id", "archived", "created", "content", "excerpt", "tags", "title", "updated", "url")
 		query.Record(bookmark)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error creating bookmark")
+			log.Ctx(ctx).Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error creating bookmark")
 			return err
 		}
 	} else {
-		query := store.db.Update("bookmarks")
+		query := store.db.Update(ctx).Table("bookmarks")
 		query.Set("archived", bookmark.Archived)
 		query.Set("content", bookmark.Content)
 		query.Set("excerpt", bookmark.Excerpt)
@@ -185,23 +186,23 @@ func (store *Store) PersistBookmark(bookmark *Bookmark) error {
 		query.Where("id = ?", bookmark.ID)
 
 		if _, err := query.Exec(); err != nil {
-			log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error updating bookmark")
+			log.Ctx(ctx).Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error updating bookmark")
 			return err
 		}
 	}
 
-	log.Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Persisted bookmark")
+	log.Ctx(ctx).Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Persisted bookmark")
 
 	return nil
 }
 
 // DeleteBookmark deletes the given bookmark from the database
-func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
+func (store *Store) DeleteBookmark(ctx context.Context, bookmark *Bookmark) error {
 	if bookmark.ID == "" && bookmark.URL == "" {
 		return ErrNoBookmarkKey
 	}
 
-	query := store.db.Delete("bookmarks")
+	query := store.db.Delete(ctx).From("bookmarks")
 
 	if bookmark.ID != "" {
 		query.Where("id = ?", bookmark.ID)
@@ -212,11 +213,11 @@ func (store *Store) DeleteBookmark(bookmark *Bookmark) error {
 	}
 
 	if _, err := query.Exec(); err != nil {
-		log.Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error deleting bookmark")
+		log.Ctx(ctx).Error().Err(err).Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Error deleting bookmark")
 		return err
 	}
 
-	log.Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Bookmark deleted")
+	log.Ctx(ctx).Info().Str("id", bookmark.ID).Str("url", bookmark.URL).Msg("Bookmark deleted")
 
 	return nil
 }

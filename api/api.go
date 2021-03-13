@@ -12,25 +12,43 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/nrocco/bookmarks/storage"
-	"github.com/rs/zerolog/log"
+	"github.com/nrocco/qb"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
 )
 
 //go:generate go-bindata -pkg api -o bindata.go -prefix ../web/dist ../web/dist/...
 
-// New returns a new instance of API
-func New(store *storage.Store, auth bool) *API {
+// New instantiates a new Bookmarks API instance
+func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(5 * time.Second))
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Timeout(1 * time.Second))
 	r.Use(middleware.Heartbeat("/ping"))
 
 	r.Route("/api", func(r chi.Router) {
-		r.Use(loggerMiddleware())
+		r.Use(hlog.NewHandler(logger))
+		r.Use(hlog.AccessHandler(func(r *http.Request, status, size int, duration time.Duration) {
+			hlog.FromRequest(r).Info().Str("method", r.Method).Str("url", r.URL.String()).Int("status", status).Int("size", size).Dur("duration", duration).Msg("")
+		}))
+		r.Use(hlog.RemoteAddrHandler("ip"))
+		r.Use(hlog.RequestIDHandler("req_id", "X-Request-Id"))
+
 		if auth {
 			r.Use(authenticator(store))
 		}
+
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx := qb.WitLogger(r.Context(), func(duration time.Duration, format string, v ...interface{}) {
+					hlog.FromRequest(r).Debug().Dur("duration", duration).Msgf(format, v...)
+				})
+
+				next.ServeHTTP(w, r.WithContext(ctx))
+			})
+		})
+
 		r.Mount("/bookmarks", bookmarks{store}.Routes())
 		r.Mount("/feeds", feeds{store}.Routes())
 		r.Mount("/thoughts", thoughts{store}.Routes())
@@ -41,14 +59,13 @@ func New(store *storage.Store, auth bool) *API {
 	return &API{r}
 }
 
-// API glues together HTTP and the Bookmarks Store
+// API represents a Bookmarks rest API instance
 type API struct {
 	router chi.Router
 }
 
-// ListenAndServe binds the API to the given address and listens for requests
+// ListenAndServe listens on the given address:port and serve the Bookmarks rest API
 func (api *API) ListenAndServe(address string) error {
-	log.Info().Msgf("Starting webserver at http://%s", address)
 	return http.ListenAndServe(address, api.router)
 }
 
@@ -58,14 +75,14 @@ func (c contextKey) String() string {
 	return "bookmarks rest api context key " + string(c)
 }
 
-func jsonError(w http.ResponseWriter, err error, code int) {
-	jsonResponse(w, code, map[string]string{"message": err.Error()})
-}
-
 func jsonResponse(w http.ResponseWriter, code int, object interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(object)
+}
+
+func jsonError(w http.ResponseWriter, message string, code int) {
+	jsonResponse(w, code, map[string]string{"error": message})
 }
 
 func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +101,7 @@ func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", mimetype)
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=604800") // 1 week
+	w.Header().Set("Cache-Control", "public, max-age=31557600") // 1 year
 	w.WriteHeader(200)
 	w.Write(asset)
 }

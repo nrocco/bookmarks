@@ -21,20 +21,19 @@ type thoughts struct {
 
 func (api thoughts) Routes() chi.Router {
 	r := chi.NewRouter()
-
-	r.Get("/", api.listThought)
+	r.Get("/", api.list)
 	r.Route("/{title}", func(r chi.Router) {
 		r.Use(api.middleware)
-		r.Get("/", api.getThought)
-		r.Put("/", api.putThought)
-		r.Delete("/", api.deleteThought)
+		r.Get("/", api.get)
+		r.Put("/", api.put)
+		r.Delete("/", api.delete)
 	})
 
 	return r
 }
 
-func (api *thoughts) listThought(w http.ResponseWriter, r *http.Request) {
-	thoughts, totalCount := api.store.ListThoughts(&storage.ListThoughtsOptions{
+func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
+	thoughts, totalCount := api.store.ThoughtList(r.Context(), &storage.ThoughtListOptions{
 		Search: r.URL.Query().Get("q"),
 		Tags:   strings.Split(r.URL.Query().Get("tags"), ","),
 		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
@@ -50,7 +49,7 @@ func (api *thoughts) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		thought := storage.Thought{Title: chi.URLParam(r, "title")}
 
-		if err := api.store.GetThought(&thought); err != nil && r.Method != "PUT" {
+		if err := api.store.ThoughtGet(r.Context(), &thought); err != nil && r.Method != "PUT" {
 			w.WriteHeader(404)
 			return
 		}
@@ -60,7 +59,7 @@ func (api *thoughts) middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *thoughts) getThought(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	w.Header().Set("X-ID", thought.ID)
@@ -72,7 +71,7 @@ func (api *thoughts) getThought(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(thought.Content))
 }
 
-func (api *thoughts) putThought(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	if tags := r.Header.Get("X-Tags"); tags != "" {
@@ -92,7 +91,7 @@ func (api *thoughts) putThought(w http.ResponseWriter, r *http.Request) {
 		thought.Content = string(body)
 	}
 
-	if err := api.store.PersistThought(thought); err != nil {
+	if err := api.store.ThoughtPersist(r.Context(), thought); err != nil {
 		w.Header().Set("X-Error", err.Error())
 		w.WriteHeader(500)
 		return
@@ -106,10 +105,10 @@ func (api *thoughts) putThought(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(thought.Content))
 }
 
-func (api *thoughts) deleteThought(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) delete(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
-	if err := api.store.DeleteThought(thought); err != nil {
+	if err := api.store.ThoughtDelete(r.Context(), thought); err != nil {
 		w.Header().Set("X-Error", err.Error())
 		w.WriteHeader(500)
 		return

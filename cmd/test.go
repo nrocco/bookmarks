@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -16,7 +17,7 @@ var testFetchBookmarkCmd = &cobra.Command{
 			URL: args[0],
 		}
 
-		if err := bookmark.Fetch(); err != nil {
+		if err := bookmark.Fetch(context.TODO()); err != nil {
 			log.Fatalf("Oh no!")
 		}
 
@@ -40,7 +41,7 @@ var testFetchFeedCmd = &cobra.Command{
 			// Etag:      os.Args[2],
 		}
 
-		if err := feed.Fetch(); err != nil {
+		if err := feed.Fetch(context.TODO()); err != nil {
 			return err
 		}
 

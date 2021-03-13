@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql/driver"
+
 	"github.com/nrocco/qb"
 )
 

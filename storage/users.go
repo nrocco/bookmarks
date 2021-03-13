@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -9,44 +10,76 @@ import (
 
 // User represents a user that can authenticate to the bookmarks service
 type User struct {
-	Username string
-	Password string
-	Token    string
-	Created  time.Time
-	Updated  time.Time
+	ID       string    `json:"id"`
+	Created  time.Time `json:"-"`
+	Updated  time.Time `json:"-"`
+	Username string    `json:"username"`
+	Password string    `json:"password"`
+	Token    string    `json:"token"`
 }
 
-// GetUser finds a single user by Username
-func (store *Store) GetUser(user *User) error {
-	return store.db.Select("users").Columns("*").Where("username = ?", user.Username).Limit(1).LoadValue(user)
+func (a *User) SetPassword(password string) error {
+	var encryptedPassword []byte
+	var err error
+
+	encryptedPassword, err = bcrypt.GenerateFromPassword([]byte(password), 1)
+	if err != nil {
+		return err
+	}
+
+	a.Password = string(encryptedPassword[:])
+
+	return nil
 }
 
-// Authenticate authenticates a user with a password and returns the token for the user
-func (store *Store) Authenticate(username string, password string) (string, error) {
-	user := User{
-		Username: username,
+func (store *Store) UserAdd(ctx context.Context, user *User) error {
+	user.ID = generateUUID()
+	user.Created = time.Now()
+	user.Updated = time.Now()
+
+	query := store.db.Insert(ctx).InTo("users")
+	query.Columns("id", "created", "updated", "username", "password", "token")
+	query.Record(user)
+
+	if _, err := query.Exec(); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("Could not create user")
+		return err
 	}
 
-	if err := store.GetUser(&user); err != nil {
-		return "", err
-	}
+	log.Ctx(ctx).Info().Str("id", user.ID).Str("username", user.Username).Msg("User created")
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", err
-	}
-
-	return user.Token, nil
+	return nil
 }
 
-// UserTokenExists checks if there is exactly one user with the given token
-func (store *Store) UserTokenExists(token string) bool {
-	count := 0
+func (store *Store) UserTokenExists(ctx context.Context, token string) bool {
+	var count int64
 
-	query := store.db.Select("users").Columns("COUNT(*)").Where("token = ?", token)
-	if err := query.LoadValue(&count); err != nil {
-		log.Warn().Err(err).Msg("Error fetching token")
-		return false
-	}
+	query := store.db.Select(ctx).From("users")
+	query.Columns("COUNT(id)")
+	query.Where("token = ?", token)
+	query.LoadValue(&count)
 
 	return count == 1
+}
+
+func (store *Store) UserPasswordHash(ctx context.Context, username string) string {
+	var password string
+
+	query := store.db.Select(ctx).From("users")
+	query.Columns("password")
+	query.Where("username = ?", username)
+	query.LoadValue(&password)
+
+	return password
+}
+
+func (store *Store) UserTokenGet(ctx context.Context, username string) string {
+	var token string
+
+	query := store.db.Select(ctx).From("users")
+	query.Columns("token")
+	query.Where("username = ?", username)
+	query.LoadValue(&token)
+
+	return token
 }

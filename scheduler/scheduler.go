@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"time"
 
 	"github.com/nrocco/bookmarks/storage"
@@ -18,7 +19,7 @@ func New(store *storage.Store, interval int) {
 			go func() {
 				notRefreshedSince := time.Now().Add(-1 * time.Hour)
 
-				feeds, totalCount := store.ListFeeds(&storage.ListFeedsOptions{
+				feeds, totalCount := store.ListFeeds(context.TODO(), &storage.ListFeedsOptions{
 					NotRefreshedSince: notRefreshedSince,
 					Limit:             100,
 				})
@@ -26,7 +27,7 @@ func New(store *storage.Store, interval int) {
 				log.Info().Int("feeds", totalCount).Time("not_refreshed_since", notRefreshedSince).Msg("Unfresh feeds found")
 
 				for _, feed := range *feeds {
-					if err := store.RefreshFeed(feed); err != nil {
+					if err := store.RefreshFeed(context.TODO(), feed); err != nil {
 						log.Warn().Err(err).Str("feed_title", feed.Title).Msg("Error refreshing feed")
 					}
 				}
