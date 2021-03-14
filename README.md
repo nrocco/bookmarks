@@ -3,6 +3,10 @@ bookmarks
 
 Personal zero-touch bookmarking app in the cloud, with full text search support.
 
+[![Actions Status](https://github.com/nrocco/bookmarks/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/nrocco/bookmarks/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nrocco/bookmarks.svg)](https://pkg.go.dev/github.com/nrocco/bookmarks)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nrocco/bookmarks)](https://goreportcard.com/report/github.com/nrocco/bookmarks)
+
 ![Screenshot](screenshot.png)
 
 
