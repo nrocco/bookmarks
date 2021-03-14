@@ -5,7 +5,7 @@
     "last 2 versions"
   ],
   "dependencies": {
-    "axios": "^0.21.0",
+    "axios": "^0.21.1",
     "bulma": "^0.9.1",
     "core-js": "^3.8.0",
     "lodash": "^4.17.15",
