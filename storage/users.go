@@ -18,6 +18,7 @@ type User struct {
 	Token    string    `json:"token"`
 }
 
+// SetPassword updates the password of the given user
 func (a *User) SetPassword(password string) error {
 	var encryptedPassword []byte
 	var err error
@@ -32,6 +33,7 @@ func (a *User) SetPassword(password string) error {
 	return nil
 }
 
+// UserAdd persists a new user to the store
 func (store *Store) UserAdd(ctx context.Context, user *User) error {
 	user.ID = generateUUID()
 	user.Created = time.Now()
@@ -51,6 +53,7 @@ func (store *Store) UserAdd(ctx context.Context, user *User) error {
 	return nil
 }
 
+// UserTokenExists checks if a user exists with the given token
 func (store *Store) UserTokenExists(ctx context.Context, token string) bool {
 	var count int64
 
@@ -62,6 +65,7 @@ func (store *Store) UserTokenExists(ctx context.Context, token string) bool {
 	return count == 1
 }
 
+// UserPasswordHash gets the password hash of the given user
 func (store *Store) UserPasswordHash(ctx context.Context, username string) string {
 	var password string
 
@@ -73,6 +77,7 @@ func (store *Store) UserPasswordHash(ctx context.Context, username string) strin
 	return password
 }
 
+// UserTokenGet returns the token of the given user
 func (store *Store) UserTokenGet(ctx context.Context, username string) string {
 	var token string
 
