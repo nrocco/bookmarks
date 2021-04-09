@@ -48,13 +48,12 @@ RUN --mount=type=cache,target=/root/.cache/go-build golint -set_exit_status ./..
 RUN --mount=type=cache,target=/root/.cache/go-build go vet -v ./...
 RUN mkdir -p dist
 RUN --mount=type=cache,target=/root/.cache/go-build GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -v -x -o dist \
-        --tags "json1 fts5" \
         -ldflags "\
             -X github.com/nrocco/bookmarks/cmd.version=${BUILD_VERSION} \
             -X github.com/nrocco/bookmarks/cmd.commit=${BUILD_COMMIT} \
             -X github.com/nrocco/bookmarks/cmd.date=${BUILD_DATE} \
             -s -w"
-# RUN --mount=type=cache,target=/root/.cache/go-build go test -v -short ./...
+RUN --mount=type=cache,target=/root/.cache/go-build go test -v -short ./...
 
 
 
