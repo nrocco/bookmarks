@@ -8,6 +8,7 @@
 !storage
 !web/.browserslistrc
 !web/.eslintrc.js
+!web/assets.go
 !web/babel.config.js
 !web/package-lock.json
 !web/package.json

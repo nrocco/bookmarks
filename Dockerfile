@@ -9,7 +9,6 @@ RUN apk add --no-cache \
     && true
 RUN env GO111MODULE=on go get -u \
         github.com/cortesi/modd/cmd/modd \
-        github.com/kevinburke/go-bindata/... \
         golang.org/x/lint/golint \
         golang.org/x/tools/cmd/goimports \
     && true
@@ -43,7 +42,6 @@ ARG TARGETOS
 ARG TARGETARCH
 COPY . .
 COPY --from=nodebuilder /src/web/dist/ ./web/dist/
-RUN --mount=type=cache,target=/root/.cache/go-build go generate -v api/api.go
 RUN --mount=type=cache,target=/root/.cache/go-build golint -set_exit_status ./...
 RUN --mount=type=cache,target=/root/.cache/go-build go vet -v ./...
 RUN mkdir -p dist
