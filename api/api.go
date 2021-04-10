@@ -12,12 +12,11 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/nrocco/bookmarks/storage"
+	"github.com/nrocco/bookmarks/web"
 	"github.com/nrocco/qb"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 )
-
-//go:generate go-bindata -pkg api -o bindata.go -prefix ../web/dist ../web/dist/...
 
 // New instantiates a new Bookmarks API instance
 func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
@@ -54,7 +53,7 @@ func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
 		r.Mount("/thoughts", thoughts{store}.Routes())
 	})
 
-	r.Get("/*", bindataAssetHandler)
+	r.Get("/*", webAssetHandler)
 
 	return &API{r}
 }
@@ -85,13 +84,13 @@ func jsonError(w http.ResponseWriter, message string, code int) {
 	jsonResponse(w, code, map[string]string{"error": message})
 }
 
-func bindataAssetHandler(w http.ResponseWriter, r *http.Request) {
+func webAssetHandler(w http.ResponseWriter, r *http.Request) {
 	file := strings.TrimPrefix(r.URL.Path, "/")
 	if file == "" {
 		file = "index.html"
 	}
 
-	asset, err := Asset(file)
+	asset, err := web.Assets.ReadFile("dist/" + file)
 	if err != nil {
 		w.WriteHeader(404)
 		return
