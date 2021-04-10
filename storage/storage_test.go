@@ -31,7 +31,7 @@ func TestNewPathDoesNotExist(t *testing.T) {
 		t.Fatal("This should have failed")
 	}
 
-	if "open /i/do/not/exist/data.db: no such file or directory" != err.Error() {
+	if "unable to open database file: out of memory (14)" != err.Error() {
 		t.Fatal(err)
 	}
 }
