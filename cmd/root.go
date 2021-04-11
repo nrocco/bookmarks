@@ -40,7 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .bookmarks.yaml in $PWD, $HOME, /etc)")
 
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug mode")
-	rootCmd.PersistentFlags().StringP("storage", "s", "", "The location where to store state")
+	rootCmd.PersistentFlags().StringP("storage", "s", "data.db", "The location where to store state")
 
 	viper.BindPFlag("debug", rootCmd.PersistentFlags().Lookup("debug"))
 	viper.BindPFlag("storage", rootCmd.PersistentFlags().Lookup("storage"))
