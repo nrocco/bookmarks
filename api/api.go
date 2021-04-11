@@ -23,7 +23,7 @@ func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Timeout(1 * time.Second))
+	r.Use(middleware.Timeout(5 * time.Second))
 	r.Use(middleware.Heartbeat("/ping"))
 
 	r.Route("/api", func(r chi.Router) {

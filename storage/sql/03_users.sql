@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS users (
+    id CHAR(16) PRIMARY KEY,
+    created DATE NOT NULL,
+    updated DATE NOT NULL,
+    username VARCHAR(64) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE
+) WITHOUT ROWID;

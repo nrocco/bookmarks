@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/nrocco/bookmarks/api"
@@ -26,7 +27,7 @@ var serverCmd = &cobra.Command{
 			Msg("Starting bookmarks")
 
 		// Setup the database
-		store, err := storage.New(viper.GetString("storage"))
+		store, err := storage.New(context.Background(), viper.GetString("storage"))
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Could not open the database")
 		}

@@ -32,7 +32,6 @@ func (api feeds) Routes() chi.Router {
 		r.Post("/refresh", api.refreshFeed)
 		r.Route("/items/{id}", func(r chi.Router) {
 			r.Delete("/", api.deleteFeedItem)
-			r.Post("/readitlater", api.readLaterFeedItem)
 		})
 	})
 
@@ -40,7 +39,7 @@ func (api feeds) Routes() chi.Router {
 }
 
 func (api *feeds) listFeed(w http.ResponseWriter, r *http.Request) {
-	feeds, totalCount := api.store.ListFeeds(r.Context(), &storage.ListFeedsOptions{
+	feeds, totalCount := api.store.FeedList(r.Context(), &storage.FeedListOptions{
 		Search: r.URL.Query().Get("q"),
 		Tags:   strings.Split(r.URL.Query().Get("tags"), ","),
 		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
@@ -63,12 +62,12 @@ func (api *feeds) createFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.PersistFeed(r.Context(), &feed); err != nil {
+	if err := api.store.FeedPersist(r.Context(), &feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	if err := api.store.RefreshFeed(r.Context(), &feed); err != nil {
+	if err := api.store.FeedRefresh(r.Context(), &feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
@@ -80,7 +79,7 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		feed := storage.Feed{ID: chi.URLParam(r, "id")}
 
-		if err := api.store.GetFeed(r.Context(), &feed); err != nil {
+		if err := api.store.FeedGet(r.Context(), &feed); err != nil {
 			jsonError(w, "Feed Not Found", 404)
 			return
 		}
@@ -93,7 +92,7 @@ func (api *feeds) middleware(next http.Handler) http.Handler {
 func (api *feeds) refreshFeed(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	if err := api.store.RefreshFeed(r.Context(), feed); err != nil {
+	if err := api.store.FeedRefresh(r.Context(), feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
@@ -118,7 +117,7 @@ func (api *feeds) updateFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+	if err := api.store.FeedPersist(r.Context(), feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
@@ -129,41 +128,7 @@ func (api *feeds) updateFeed(w http.ResponseWriter, r *http.Request) {
 func (api *feeds) deleteFeed(w http.ResponseWriter, r *http.Request) {
 	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
 
-	if err := api.store.DeleteFeed(r.Context(), feed); err != nil {
-		jsonError(w, err.Error(), 500)
-		return
-	}
-
-	jsonResponse(w, 204, nil)
-}
-
-func (api *feeds) readLaterFeedItem(w http.ResponseWriter, r *http.Request) {
-	feed := r.Context().Value(contextKeyFeed).(*storage.Feed)
-	item := feed.GetItem(chi.URLParam(r, "id"))
-
-	if item == nil {
-		jsonError(w, "Item Not Found", 404)
-		return
-	}
-
-	bookmark := item.ToBookmark()
-
-	if err := bookmark.Fetch(r.Context()); err != nil {
-		jsonError(w, err.Error(), 500)
-		return
-	}
-
-	if err := api.store.PersistBookmark(r.Context(), bookmark); err != nil {
-		jsonError(w, err.Error(), 500)
-		return
-	}
-
-	if err := feed.DeleteItem(item.ID); err != nil {
-		jsonError(w, err.Error(), 404)
-		return
-	}
-
-	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+	if err := api.store.FeedDelete(r.Context(), feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
@@ -179,7 +144,7 @@ func (api *feeds) deleteFeedItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.store.PersistFeed(r.Context(), feed); err != nil {
+	if err := api.store.FeedPersist(r.Context(), feed); err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}

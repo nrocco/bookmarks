@@ -88,13 +88,9 @@ func (feed *Feed) Fetch(ctx context.Context) error {
 
 	logger.Info().Int("items", len(parsedFeed.Items)).Msg("Found items in Feed")
 
-	textCleaner := bluemonday.UGCPolicy()
+	textCleaner := bluemonday.StrictPolicy()
 
 	for _, item := range parsedFeed.Items {
-		if strings.HasPrefix(item.Title, "[Advertorial]") {
-			continue
-		}
-
 		feedItem := &FeedItem{
 			ID:      generateUUID(),
 			Created: time.Now(),
@@ -170,8 +166,8 @@ func (feed *Feed) DeleteItem(ID string) error {
 	return ErrNotExistingFeedItem
 }
 
-// ListFeedsOptions is used to pass filters to ListFeeds
-type ListFeedsOptions struct {
+// FeedListOptions is used to pass filters to FeedList
+type FeedListOptions struct {
 	Search            string
 	Tags              Tags
 	NotRefreshedSince time.Time
@@ -179,8 +175,8 @@ type ListFeedsOptions struct {
 	Offset            int
 }
 
-// ListFeeds fetches multiple feeds from the database
-func (store *Store) ListFeeds(ctx context.Context, options *ListFeedsOptions) (*[]*Feed, int) {
+// FeedList fetches multiple feeds from the database
+func (store *Store) FeedList(ctx context.Context, options *FeedListOptions) (*[]*Feed, int) {
 	query := store.db.Select(ctx).From("feeds")
 
 	if options.Search != "" {
@@ -222,8 +218,8 @@ func (store *Store) ListFeeds(ctx context.Context, options *ListFeedsOptions) (*
 	return &feeds, totalCount
 }
 
-// GetFeed finds a single feed by ID or URL
-func (store *Store) GetFeed(ctx context.Context, feed *Feed) error {
+// FeedGet finds a single feed by ID or URL
+func (store *Store) FeedGet(ctx context.Context, feed *Feed) error {
 	query := store.db.Select(ctx).From("feeds")
 	query.Limit(1)
 
@@ -242,8 +238,8 @@ func (store *Store) GetFeed(ctx context.Context, feed *Feed) error {
 	return nil
 }
 
-// PersistFeed persists a feed to the database and schedules an async job to fetch the content
-func (store *Store) PersistFeed(ctx context.Context, feed *Feed) error {
+// FeedPersist persists a feed to the database and schedules an async job to fetch the content
+func (store *Store) FeedPersist(ctx context.Context, feed *Feed) error {
 	if feed.URL == "" {
 		return ErrNoFeedURL
 	}
@@ -303,8 +299,8 @@ func (store *Store) PersistFeed(ctx context.Context, feed *Feed) error {
 	return nil
 }
 
-// DeleteFeed deletes the given feed from the database
-func (store *Store) DeleteFeed(ctx context.Context, feed *Feed) error {
+// FeedDelete deletes the given feed from the database
+func (store *Store) FeedDelete(ctx context.Context, feed *Feed) error {
 	if feed.ID == "" && feed.URL == "" {
 		return ErrNoFeedKey
 	}
@@ -329,13 +325,13 @@ func (store *Store) DeleteFeed(ctx context.Context, feed *Feed) error {
 	return nil
 }
 
-// RefreshFeed fetches the rss feed items and persists those to the database
-func (store *Store) RefreshFeed(ctx context.Context, feed *Feed) error {
+// FeedRefresh fetches the rss feed items and persists those to the database
+func (store *Store) FeedRefresh(ctx context.Context, feed *Feed) error {
 	if err := feed.Fetch(ctx); err != nil {
 		return err
 	}
 
-	if err := store.PersistFeed(ctx, feed); err != nil {
+	if err := store.FeedPersist(ctx, feed); err != nil {
 		return err
 	}
 

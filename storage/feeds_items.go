@@ -40,12 +40,3 @@ func (i FeedItem) Value() (driver.Value, error) {
 func (i *FeedItem) Scan(value interface{}) error {
 	return qb.JSONScan(i, value)
 }
-
-// ToBookmark converts the feed item to a bookmark
-func (i *FeedItem) ToBookmark() *Bookmark {
-	return &Bookmark{
-		Title:   i.Title,
-		URL:     i.URL,
-		Content: i.Content,
-	}
-}

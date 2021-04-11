@@ -9,21 +9,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	// ErrNoThoughtTitle is returned if the Thought does not have a Title
-	ErrNoThoughtTitle = errors.New("Missing Thought.Title")
-
-	// ErrNoThoughtKey is returned if the Thought does not have a ID or Title
-	ErrNoThoughtKey = errors.New("Missing Thought.ID or Thought.Title")
-)
-
 // Thought holds information about a thought
 type Thought struct {
 	ID      string
 	Created time.Time
 	Updated time.Time
-	Title   string
-	Content string `json:",omitempty"`
+	Content string
 	Tags    Tags
 }
 
@@ -62,7 +53,7 @@ func (store *Store) ThoughtList(ctx context.Context, options *ThoughtListOptions
 		return &thoughts, 0
 	}
 
-	query.Columns("id", "created", "updated", "tags", "title")
+	query.Columns("id", "created", "updated", "content", "tags")
 	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
@@ -81,10 +72,8 @@ func (store *Store) ThoughtGet(ctx context.Context, thought *Thought) error {
 
 	if thought.ID != "" {
 		query.Where("id = ?", thought.ID)
-	} else if thought.Title != "" {
-		query.Where("title = ?", thought.Title)
 	} else {
-		return ErrNoThoughtKey
+		return errors.New("Missing Thought.ID")
 	}
 
 	if err := query.LoadValue(&thought); err != nil {
@@ -96,10 +85,6 @@ func (store *Store) ThoughtGet(ctx context.Context, thought *Thought) error {
 
 // ThoughtPersist adds a thought to the database
 func (store *Store) ThoughtPersist(ctx context.Context, thought *Thought) error {
-	if thought.Title == "" {
-		return ErrNoThoughtTitle
-	}
-
 	if thought.Created.IsZero() {
 		thought.Created = time.Now()
 	}
@@ -110,43 +95,39 @@ func (store *Store) ThoughtPersist(ctx context.Context, thought *Thought) error 
 
 	thought.Updated = time.Now()
 
-	// Check if there is already a thought with the same Title in the database
-	store.db.Select(ctx).From("thoughts").Columns("id", "created").Where("title = ?", thought.Title).Limit(1).LoadValue(&thought)
-
 	if thought.ID == "" {
 		thought.ID = generateUUID()
 
 		query := store.db.Insert(ctx).InTo("thoughts")
-		query.Columns("id", "title", "created", "content", "tags", "updated")
+		query.Columns("id", "created", "content", "tags", "updated")
 		query.Record(thought)
 
 		if _, err := query.Exec(); err != nil {
-			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error persisting thought")
+			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Msg("Error persisting thought")
 			return err
 		}
 	} else {
 		query := store.db.Update(ctx).Table("thoughts")
 		query.Set("content", thought.Content)
 		query.Set("tags", thought.Tags)
-		query.Set("title", thought.Title)
 		query.Set("updated", thought.Updated)
 		query.Where("id = ?", thought.ID)
 
 		if _, err := query.Exec(); err != nil {
-			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error updating thought")
+			log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Msg("Error updating thought")
 			return err
 		}
 	}
 
-	log.Ctx(ctx).Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Persisted thought")
+	log.Ctx(ctx).Info().Str("id", thought.ID).Msg("Persisted thought")
 
 	return nil
 }
 
 // ThoughtDelete removes a thought from the database
 func (store *Store) ThoughtDelete(ctx context.Context, thought *Thought) error {
-	if thought.ID == "" && thought.Title == "" {
-		return ErrNoThoughtKey
+	if thought.ID == "" {
+		return errors.New("Missing Thought.ID")
 	}
 
 	query := store.db.Delete(ctx).From("thoughts")
@@ -155,16 +136,12 @@ func (store *Store) ThoughtDelete(ctx context.Context, thought *Thought) error {
 		query.Where("id = ?", thought.ID)
 	}
 
-	if thought.Title != "" {
-		query.Where("title = ?", thought.Title)
-	}
-
 	if _, err := query.Exec(); err != nil {
-		log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Str("title", thought.Title).Msg("Error deleting thought")
+		log.Ctx(ctx).Error().Err(err).Str("id", thought.ID).Msg("Error deleting thought")
 		return err
 	}
 
-	log.Ctx(ctx).Info().Str("id", thought.ID).Str("title", thought.Title).Msg("Thought refreshed")
+	log.Ctx(ctx).Info().Str("id", thought.ID).Msg("Thought refreshed")
 
 	return nil
 }

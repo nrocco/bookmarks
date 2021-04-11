@@ -18,30 +18,29 @@ const (
 )
 
 // New returns a new instance of a Bookmarks Store
-func New(path string) (*Store, error) {
+func New(ctx context.Context, path string) (*Store, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return &Store{}, err
 	}
 
-	db, err := qb.Open(context.TODO(), filepath.Join(path, "data.db"))
+	db, err := qb.Open(ctx, path)
 	if err != nil {
 		return &Store{}, err
 	}
 
-	store := Store{db, path}
+	store := Store{db}
 
-	if err := store.migrate(context.TODO()); err != nil {
+	if err := store.migrate(ctx); err != nil {
 		return &Store{}, err
 	}
 
 	return &store, nil
 }
 
-// Store is used to persist Bookmark, Feed and Thougt
+// Store is used to persist Bookmark, Feed and Thought's
 type Store struct {
 	db *qb.DB
-	fs string
 }
 
 func generateUUID() (uuid string) {

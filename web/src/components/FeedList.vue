@@ -49,20 +49,16 @@
 
     <hr/>
 
-    <div class="feed-item card mt-5" v-for="item in items" :key="item.ID">
-      <div class="card-content">
-        <p class="title is-4">
-          {{ item.Title }}
-        </p>
-        <p class="subtitle is-6">
-          <time>{{ item.Date|moment("from", "now") }}</time> - <a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">{{ item.URL }}</a>
-        </p>
-        <div class="content is-small" v-html="item.Content"></div>
-      </div>
-      <footer class="card-footer">
-        <a @click.prevent="onRemoveClicked(item)" class="card-footer-item">Remove</a>
-        <a @click.prevent="onReadItLaterClicked(item)" class="card-footer-item">Read it later</a>
-      </footer>
+    <div class="feed-item block" v-for="item in items" :key="item.ID">
+      <p class="is-size-5 has-text-weight-semibold">{{ item.Title }}</p>
+      <p class="is-size-7 mb-2">
+        <time :title="item.Date">{{ item.Date|moment("from", "now") }}</time>
+        <span> - </span>
+        <a class="url" :href="item.URL" :target="isIphone ? '_blank' : ''">View at {{ item.Feed.Title }}</a>
+        <span> - </span>
+        <a @click.prevent="onRemoveClicked(item)" class="has-text-danger">Remove</a>
+      </p>
+      <p>{{ item.Content.substring(0, 1024) }}&#8230;</p>
     </div>
   </div>
 </template>
@@ -143,12 +139,6 @@ export default {
       this.changeRouteOnFilterChange(this.filters)
     },
 
-    onReadItLaterClicked (item) {
-      this.$http.post(`/feeds/${item.Feed.ID}/items/${item.ID}/readitlater`).then(() => {
-        item.Feed.Items.splice(item.Feed.Items.indexOf(item), 1)
-      })
-    },
-
     onRemoveClicked (item) {
       this.$http.delete(`/feeds/${item.Feed.ID}/items/${item.ID}`).then(() => {
         item.Feed.Items.splice(item.Feed.Items.indexOf(item), 1)
@@ -171,6 +161,15 @@ export default {
 </script>
 
 <style>
+.feed-item {
+  padding: 1rem;
+  background-color: hsl(0, 0%, 99%);
+  border: 1px solid hsl(0, 0%, 97%);
+  border-radius: 4px;
+}
+.feed-item:hover {
+  background-color: hsl(0, 0%, 98%);
+}
 .feed-item .url {
   word-break: break-all;
 }

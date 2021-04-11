@@ -22,10 +22,11 @@ type thoughts struct {
 func (api thoughts) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", api.list)
-	r.Route("/{title}", func(r chi.Router) {
+	r.Post("/", api.create)
+	r.Route("/{id}", func(r chi.Router) {
 		r.Use(api.middleware)
 		r.Get("/", api.get)
-		r.Put("/", api.put)
+		r.Put("/", api.update)
 		r.Delete("/", api.delete)
 	})
 
@@ -45,11 +46,17 @@ func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, 200, thoughts)
 }
 
+func (api *thoughts) create(w http.ResponseWriter, r *http.Request) {
+	ctx := context.WithValue(r.Context(), contextKeyThought, &storage.Thought{})
+	r = r.WithContext(ctx)
+	api.update(w, r)
+}
+
 func (api *thoughts) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		thought := storage.Thought{Title: chi.URLParam(r, "title")}
+		thought := storage.Thought{ID: chi.URLParam(r, "id")}
 
-		if err := api.store.ThoughtGet(r.Context(), &thought); err != nil && r.Method != "PUT" {
+		if err := api.store.ThoughtGet(r.Context(), &thought); err != nil {
 			w.WriteHeader(404)
 			return
 		}
@@ -62,7 +69,6 @@ func (api *thoughts) middleware(next http.Handler) http.Handler {
 func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
-	w.Header().Set("X-ID", thought.ID)
 	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Updated", thought.Updated.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Tags", strings.Join(thought.Tags, ","))
@@ -71,7 +77,7 @@ func (api *thoughts) get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(thought.Content))
 }
 
-func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
+func (api *thoughts) update(w http.ResponseWriter, r *http.Request) {
 	thought := r.Context().Value(contextKeyThought).(*storage.Thought)
 
 	if tags := r.Header.Get("X-Tags"); tags != "" {
@@ -97,6 +103,7 @@ func (api *thoughts) put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("X-Id", thought.ID)
 	w.Header().Set("X-Created", thought.Created.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Updated", thought.Updated.Format("2006-01-02T15:04:05.0000000Z"))
 	w.Header().Set("X-Tags", strings.Join(thought.Tags, ","))

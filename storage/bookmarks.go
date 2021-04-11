@@ -51,7 +51,7 @@ func (bookmark *Bookmark) Fetch(ctx context.Context) error {
 	}
 
 	bookmark.Title = article.Title
-	bookmark.Content = article.Content
+	bookmark.Content = article.TextContent
 
 	if article.Excerpt == "" {
 		size := 260
@@ -68,22 +68,17 @@ func (bookmark *Bookmark) Fetch(ctx context.Context) error {
 	return nil
 }
 
-// ListBookmarksOptions can be passed to ListBookmarks to filter bookmarks
-type ListBookmarksOptions struct {
+// BookmarkListOptions can be passed to BookmarkList to filter bookmarks
+type BookmarkListOptions struct {
 	Search      string
 	Tags        Tags
-	ReadItLater bool
 	Limit       int
 	Offset      int
 }
 
-// ListBookmarks fetches multiple bookmarks from the database
-func (store *Store) ListBookmarks(ctx context.Context, options *ListBookmarksOptions) (*[]*Bookmark, int) {
+// BookmarkList fetches multiple bookmarks from the database
+func (store *Store) BookmarkList(ctx context.Context, options *BookmarkListOptions) (*[]*Bookmark, int) {
 	query := store.db.Select(ctx).From("bookmarks")
-
-	if options.ReadItLater {
-		query.Where("archived = ?", false)
-	}
 
 	if options.Search != "" {
 		query.Where("rowid IN (SELECT rowid FROM bookmarks_fts(?))", options.Search)
@@ -120,8 +115,8 @@ func (store *Store) ListBookmarks(ctx context.Context, options *ListBookmarksOpt
 	return &bookmarks, totalCount
 }
 
-// GetBookmark finds a single bookmark by ID or URL
-func (store *Store) GetBookmark(ctx context.Context, bookmark *Bookmark) error {
+// BookmarkGet finds a single bookmark by ID or URL
+func (store *Store) BookmarkGet(ctx context.Context, bookmark *Bookmark) error {
 	query := store.db.Select(ctx).From("bookmarks")
 	query.Limit(1)
 
@@ -140,8 +135,8 @@ func (store *Store) GetBookmark(ctx context.Context, bookmark *Bookmark) error {
 	return nil
 }
 
-// PersistBookmark persists a bookmark to the database and schedules an async job to fetch the content
-func (store *Store) PersistBookmark(ctx context.Context, bookmark *Bookmark) error {
+// BookmarkPersist persists a bookmark to the database and schedules an async job to fetch the content
+func (store *Store) BookmarkPersist(ctx context.Context, bookmark *Bookmark) error {
 	if bookmark.URL == "" {
 		return ErrNoBookmarkURL
 	}
@@ -196,8 +191,8 @@ func (store *Store) PersistBookmark(ctx context.Context, bookmark *Bookmark) err
 	return nil
 }
 
-// DeleteBookmark deletes the given bookmark from the database
-func (store *Store) DeleteBookmark(ctx context.Context, bookmark *Bookmark) error {
+// BookmarkDelete deletes the given bookmark from the database
+func (store *Store) BookmarkDelete(ctx context.Context, bookmark *Bookmark) error {
 	if bookmark.ID == "" && bookmark.URL == "" {
 		return ErrNoBookmarkKey
 	}

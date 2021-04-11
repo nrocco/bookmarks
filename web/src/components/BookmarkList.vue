@@ -5,17 +5,19 @@
         <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
       </p>
     </div>
+
     <hr/>
+
     <div class="block bookmark" v-for="bookmark in bookmarks" :key="bookmark.ID">
-      <p class="has-text-weight-bold">{{ bookmark.Title }}</p>
-      <p class="is-size-7">
-        <a class="url" :href="bookmark.URL" :target="isIphone ? '_blank' : ''">{{ bookmark.URL }}</a>
+      <p class="is-size-5 has-text-weight-semibold">{{ bookmark.Title }}</p>
+      <p class="is-size-7 mb-2">
+        <time :title="bookmark.Created">{{ bookmark.Created|moment("from", "now") }}</time>
         <span> - </span>
-        <a @click.prevent="onToggleArchivedClicked(bookmark)" :class="{'has-text-primary': !bookmark.Archived, 'has-text-info': bookmark.Archived}">{{ bookmark.Archived ? 'Read it Later' : 'Archive' }}</a>
+        <a class="url" :href="bookmark.URL" :target="isIphone ? '_blank' : ''">{{ bookmark.URL }}</a>
         <span> - </span>
         <a @click.prevent="onRemoveClicked(bookmark)" class="has-text-danger">Remove</a>
       </p>
-      <p class="content">{{ bookmark.Excerpt }}&#8230;</p>
+      <p>{{ bookmark.Excerpt }}&#8230;</p>
     </div>
   </div>
 </template>
@@ -45,9 +47,7 @@ export default {
       this.filters = filters
 
       let params = {}
-      if (!this.filters.q) {
-        params.readitlater = 'true'
-      } else {
+      if (this.filters.q) {
         params.q = this.filters.q
       }
 
@@ -58,12 +58,6 @@ export default {
 
     onFilterChange () {
       this.changeRouteOnFilterChange(this.filters)
-    },
-
-    onToggleArchivedClicked (bookmark) {
-      this.$http.patch(`/bookmarks/${bookmark.ID}`, { Archived: !bookmark.Archived }).then(() => {
-        this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
-      })
     },
 
     onRemoveClicked (bookmark) {
@@ -77,13 +71,15 @@ export default {
 
 <style>
 .bookmark {
-  border-bottom: 1px solid hsl(0, 0%, 96%);
-  padding-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: hsl(0, 0%, 100%);
+  border: 1px solid hsl(0, 0%, 97%);
+  border-radius: 4px;
+}
+.bookmark:hover {
+  background-color: hsl(0, 0%, 98%);
 }
 .bookmark .url {
   word-break: break-all;
-}
-.content:not(:last-child) {
-  margin-bottom: 0.5rem;
 }
 </style>
