@@ -6,8 +6,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
     url VARCHAR(255) UNIQUE NOT NULL,
     excerpt TEXT NOT NULL DEFAULT '',
     content TEXT NOT NULL DEFAULT '',
-    tags JSON NOT NULL DEFAULT '[]',
-    archived BOOLEAN NOT NULL DEFAULT 0
+    tags JSON NOT NULL DEFAULT '[]'
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts

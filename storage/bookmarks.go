@@ -20,15 +20,14 @@ var (
 
 // Bookmark represents a single bookmark
 type Bookmark struct {
-	ID       string
-	URL      string
-	Title    string
-	Created  time.Time
-	Updated  time.Time
-	Excerpt  string
-	Content  string `json:",omitempty"`
-	Tags     Tags
-	Archived bool
+	ID      string
+	URL     string
+	Title   string
+	Created time.Time
+	Updated time.Time
+	Excerpt string
+	Content string `json:",omitempty"`
+	Tags    Tags
 }
 
 // Fetch downloads the bookmark, reduces the result to a readable plain text format
@@ -70,10 +69,10 @@ func (bookmark *Bookmark) Fetch(ctx context.Context) error {
 
 // BookmarkListOptions can be passed to BookmarkList to filter bookmarks
 type BookmarkListOptions struct {
-	Search      string
-	Tags        Tags
-	Limit       int
-	Offset      int
+	Search string
+	Tags   Tags
+	Limit  int
+	Offset int
 }
 
 // BookmarkList fetches multiple bookmarks from the database
@@ -103,7 +102,7 @@ func (store *Store) BookmarkList(ctx context.Context, options *BookmarkListOptio
 		return &bookmarks, 0
 	}
 
-	query.Columns("id", "created", "updated", "archived", "title", "url", "excerpt", "tags")
+	query.Columns("id", "created", "updated", "title", "url", "excerpt", "tags")
 	query.OrderBy("created", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
@@ -162,7 +161,7 @@ func (store *Store) BookmarkPersist(ctx context.Context, bookmark *Bookmark) err
 		bookmark.ID = generateUUID()
 
 		query := store.db.Insert(ctx).InTo("bookmarks")
-		query.Columns("id", "archived", "created", "content", "excerpt", "tags", "title", "updated", "url")
+		query.Columns("id", "created", "content", "excerpt", "tags", "title", "updated", "url")
 		query.Record(bookmark)
 
 		if _, err := query.Exec(); err != nil {
@@ -171,7 +170,6 @@ func (store *Store) BookmarkPersist(ctx context.Context, bookmark *Bookmark) err
 		}
 	} else {
 		query := store.db.Update(ctx).Table("bookmarks")
-		query.Set("archived", bookmark.Archived)
 		query.Set("content", bookmark.Content)
 		query.Set("excerpt", bookmark.Excerpt)
 		query.Set("tags", bookmark.Tags)

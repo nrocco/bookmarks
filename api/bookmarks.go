@@ -36,10 +36,10 @@ func (api bookmarks) Routes() chi.Router {
 
 func (api *bookmarks) list(w http.ResponseWriter, r *http.Request) {
 	bookmarks, totalCount := api.store.BookmarkList(r.Context(), &storage.BookmarkListOptions{
-		Search:      r.URL.Query().Get("q"),
-		Tags:        strings.Split(r.URL.Query().Get("tags"), ","),
-		Limit:       asInt(r.URL.Query().Get("_limit"), 50),
-		Offset:      asInt(r.URL.Query().Get("_offset"), 0),
+		Search: r.URL.Query().Get("q"),
+		Tags:   strings.Split(r.URL.Query().Get("tags"), ","),
+		Limit:  asInt(r.URL.Query().Get("_limit"), 50),
+		Offset: asInt(r.URL.Query().Get("_offset"), 0),
 	})
 
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
@@ -73,8 +73,8 @@ func (api *bookmarks) create(w http.ResponseWriter, r *http.Request) {
 
 func (api *bookmarks) save(w http.ResponseWriter, r *http.Request) {
 	bookmark := storage.Bookmark{
-		URL:      r.URL.Query().Get("url"),
-		Archived: false,
+		URL:  r.URL.Query().Get("url"),
+		Tags: storage.Tags{"read-it-later"},
 	}
 
 	if err := bookmark.Fetch(r.Context()); err != nil {
