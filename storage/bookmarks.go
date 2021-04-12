@@ -103,7 +103,7 @@ func (store *Store) BookmarkList(ctx context.Context, options *BookmarkListOptio
 	}
 
 	query.Columns("id", "created", "updated", "title", "url", "excerpt", "tags")
-	query.OrderBy("created", "DESC")
+	query.OrderBy("updated", "DESC")
 	query.Limit(options.Limit)
 	query.Offset(options.Offset)
 	if _, err := query.Load(&bookmarks); err != nil {
