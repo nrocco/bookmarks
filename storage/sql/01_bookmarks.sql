@@ -10,17 +10,17 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts
-USING fts5(title, url, content, content=bookmarks, content_rowid=rowid);
+USING fts5(title, url, content, tags, content=bookmarks, content_rowid=rowid);
 
 CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(rowid, title, url, content) VALUES (new.rowid, new.title, new.url, new.content);
+    INSERT INTO bookmarks_fts(rowid, title, url, content, tags) VALUES (new.rowid, new.title, new.url, new.content, new.tags);
 END;
 
 CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, url, content) VALUES('delete', old.rowid, old.title, old.url, old.content);
+    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, url, content, tags) VALUES('delete', old.rowid, old.title, old.url, old.content, old.tags);
 END;
 
 CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
-    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, url, content) VALUES('delete', old.rowid, old.title, old.url, old.content);
-    INSERT INTO bookmarks_fts(rowid, title, url, content) VALUES (new.rowid, new.title, new.url, new.content);
+    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, url, content, tags) VALUES('delete', old.rowid, old.title, old.url, old.content, old.tags);
+    INSERT INTO bookmarks_fts(rowid, title, url, content, tags) VALUES (new.rowid, new.title, new.url, new.content, new.tags);
 END;
