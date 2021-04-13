@@ -162,13 +162,13 @@ export default {
 
 <style>
 .feed-item {
-  padding: 1rem;
-  background-color: hsl(0, 0%, 99%);
-  border: 1px solid hsl(0, 0%, 97%);
+  background-color: hsl(0, 0%, 98%);
   border-radius: 4px;
+  border: 1px solid hsl(0, 0%, 94%);
+  padding: 1rem;
 }
 .feed-item:hover {
-  background-color: hsl(0, 0%, 98%);
+  border: 1px solid hsl(0, 0%, 90%);
 }
 .feed-item .url {
   word-break: break-all;

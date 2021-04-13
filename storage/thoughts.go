@@ -145,3 +145,21 @@ func (store *Store) ThoughtDelete(ctx context.Context, thought *Thought) error {
 
 	return nil
 }
+
+// ThoughtTagList lists all tags assigned to thoughts
+func (store *Store) ThoughtTagList(ctx context.Context) *[]string {
+	query := store.db.Select(ctx)
+	query.From("thoughts, json_each(thoughts.tags) AS tags")
+	query.Columns("tags.value AS tag")
+	query.GroupBy("tags.value")
+	query.OrderBy("COUNT(tags)", "DESC")
+
+	tags := []string{}
+
+	if _, err := query.Load(&tags); err != nil {
+		log.Ctx(ctx).Warn().Err(err).Msg("Error fetching thought tags")
+		return &tags
+	}
+
+	return &tags
+}

@@ -22,6 +22,7 @@ type thoughts struct {
 func (api thoughts) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", api.list)
+	r.Get("/_tags", api.taglist)
 	r.Post("/", api.create)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Use(api.middleware)
@@ -44,6 +45,10 @@ func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Pagination-Total", strconv.Itoa(totalCount))
 
 	jsonResponse(w, 200, thoughts)
+}
+
+func (api *thoughts) taglist(w http.ResponseWriter, r *http.Request) {
+	jsonResponse(w, 200, api.store.ThoughtTagList(r.Context()))
 }
 
 func (api *thoughts) create(w http.ResponseWriter, r *http.Request) {

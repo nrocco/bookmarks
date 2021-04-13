@@ -11,11 +11,13 @@
       </div>
       <div class="hero-foot">
         <nav class="tabs is-centered">
-          <ul>
-            <li><router-link exact active-class="is-active" tag="li" to="/"><a>Bookmarks</a></router-link></li>
-            <li><router-link exact active-class="is-active" tag="li" to="/feeds"><a>Feeds</a></router-link></li>
-            <li><router-link exact active-class="is-active" tag="li" to="/thoughts"><a>Thoughts</a></router-link></li>
-          </ul>
+          <div class="container">
+            <ul>
+              <router-link tag="li" exact active-class="is-active" to="/"><a>Bookmarks</a></router-link>
+              <router-link tag="li" exact active-class="is-active" to="/feeds"><a>Feeds</a></router-link>
+              <router-link tag="li" exact active-class="is-active" to="/thoughts"><a>Thoughts</a></router-link>
+            </ul>
+          </div>
         </nav>
       </div>
     </section>

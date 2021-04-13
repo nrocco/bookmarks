@@ -6,12 +6,13 @@
   ],
   "dependencies": {
     "axios": "^0.21.1",
-    "bulma": "^0.9.1",
+    "buefy": "^0.9.6",
     "core-js": "^3.8.0",
     "lodash": "^4.17.15",
     "moment": "^2.29.1",
     "showdown": "^1.9.1",
     "vue": "^2.6.11",
+    "vue-infinite-loading": "^2.4.5",
     "vue-moment": "^4.1.0",
     "vue-router": "^3.4.9",
     "vue-showdown": "^2.4.1"

@@ -25,6 +25,8 @@
       <VueShowdown class="content" :markdown="thought.Content" />
     </div>
 
+    <infinite-loading :identifier="filters" @infinite="infiniteHandler"></infinite-loading>
+
     <div v-if="thought" class="modal" :class="{'is-active': thought}">
       <div class="modal-background"></div>
       <div class="modal-card">
@@ -33,18 +35,12 @@
           <p v-else>New Thought</p>
         </header>
         <section class="modal-card-body">
-          <div class="field is-grouped is-grouped-multiline">
-            <div class="control" v-for="tag in thought.Tags" :key="tag">
-              <div class="tags has-addons">
-                <span class="tag is-light">{{ tag }}</span>
-                <a @click="onRemoveTag(tag)" class="tag is-delete"></a>
-              </div>
-            </div>
-            <div class="control">
-              <input @keyup.enter="onAddTag" @keydown.tab="onAddTag" @blur="onAddTag" class="input is-small" type="text" placeholder="Tag" autofocus>
-            </div>
-          </div>
-          <textarea v-model="thought.Content" class="textarea" rows="6"></textarea>
+          <b-field :type="{'is-success': thought.Tags.length > 0, 'is-danger': thought.Tags.length === 0}">
+            <b-taginput v-model="thought.Tags" allow-new placeholder="Add tags" open-on-focus autocomplete :data="tags"></b-taginput>
+          </b-field>
+          <b-field :type="{'is-success': thought.Content, 'is-danger': !thought.Content}">
+            <b-input v-model="thought.Content" type="textarea" rows="6"></b-input>
+          </b-field>
         </section>
         <footer class="modal-card-foot" style="justify-content:space-between;">
           <button class="button" @click="onModifyClicked(null)">Cancel</button>
@@ -57,16 +53,23 @@
 
 <script>
 import LoaderMixin from '../mixins/loader.js'
+import InfiniteLoading from 'vue-infinite-loading';
 
 export default {
   mixins: [
     LoaderMixin
   ],
 
+  components: {
+    InfiniteLoading,
+  },
+
   data: () => ({
+    limit: 10,
     filters: {},
     thoughts: [],
-    thought: null
+    thought: null,
+    tags: []
   }),
 
   computed: {
@@ -76,35 +79,18 @@ export default {
     onLoad (filters) {
       this.thoughts = []
       this.filters = filters
+    },
 
-      if (this.$route.params.title) {
-        this.$http.get(`/thoughts/${this.$route.params.title}`).then(response => {
-          this.thoughts.push({
-            Title: this.$route.params.title,
-            Created: response.headers['x-created'],
-            Updated: response.headers['x-updated'],
-            Tags: response.headers['x-tags'].split(','),
-            Content: response.data
-          })
-        }).catch(() => {
-          this.thoughts.push({
-            Title: this.$route.params.title,
-            Created: null,
-            Updated: null,
-            Tags: [],
-            Content: ''
-          })
-        })
-      } else {
-        let params = {}
-        if (this.filters.q) {
-          params.q = this.filters.q
+    infiniteHandler ($state) {
+      let payload = Object.assign({ _limit: this.limit, _offset: this.thoughts.length }, this.filters)
+      this.$http.get(`/thoughts`, { params: payload }).then(response => {
+        this.thoughts.push(...response.data)
+        if (response.data.length === 0 || this.limit > response.data.length) {
+          $state.complete()
+        } else {
+          $state.loaded()
         }
-
-        this.$http.get(`/thoughts`, { params: params }).then(response => {
-          this.thoughts = response.data
-        })
-      }
+      })
     },
 
     onFilterChange () {
@@ -116,10 +102,18 @@ export default {
         Content: '',
         Tags: []
       }
+
+      this.$http.get(`/thoughts/_tags`).then(response => {
+        this.tags = response.data
+      })
     },
 
     onModifyClicked (thought) {
       this.thought = thought
+
+      this.$http.get(`/thoughts/_tags`).then(response => {
+        this.tags = response.data
+      })
     },
 
     onRemoveClicked (thought) {
@@ -148,18 +142,6 @@ export default {
         }
         this.thought = null
       })
-    },
-
-    onRemoveTag (tag) {
-      this.thought.Tags.splice(this.thought.Tags.indexOf(tag), 1)
-    },
-
-    onAddTag (event) {
-      if (!event.target.value) {
-        return
-      }
-      this.thought.Tags.push(event.target.value)
-      event.target.value = ''
     }
   }
 }
@@ -167,13 +149,13 @@ export default {
 
 <style>
 .thought {
-  padding: 1rem;
-  background-color: hsl(0, 0%, 99%);
-  border: 1px solid hsl(0, 0%, 97%);
+  background-color: hsl(0, 0%, 98%);
   border-radius: 4px;
+  border: 1px solid hsl(0, 0%, 94%);
+  padding: 1rem;
 }
 .thought:hover {
-  background-color: hsl(0, 0%, 98%);
+  border: 1px solid hsl(0, 0%, 90%);
 }
 .thought .content h1,
 .thought .content h2,
