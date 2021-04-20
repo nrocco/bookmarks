@@ -260,6 +260,10 @@ func (store *Store) FeedPersist(ctx context.Context, feed *Feed) error {
 		feed.Tags = Tags{}
 	}
 
+	if feed.Items == nil {
+		feed.Items = FeedItems{}
+	}
+
 	feed.Updated = time.Now()
 
 	// Check if there is already a feed with the same URL in the database
