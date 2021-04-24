@@ -1,14 +1,17 @@
 <template>
   <div>
     <div class="block">
-      <div class="field has-addons">
+      <b-field grouped>
+        <div class="control">
+          <b-taginput v-model="filterTags" autocomplete :data="tags" @typing="onTagsTyping" @input="onFilterChange"></b-taginput>
+        </div>
         <div class="control is-expanded">
           <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
         </div>
         <div class="control" v-if="!filters.q">
-          <button class="button is-info" @click="onNewClicked()">New Thought</button>
+          <button class="button is-info" @click="onThoughtNewClicked()">New Thought</button>
         </div>
-      </div>
+      </b-field>
     </div>
 
     <hr/>
@@ -18,9 +21,9 @@
       <p class="is-size-7 mb-2">
         <time :title="thought.Created">{{ thought.Created|moment("from", "now") }}</time>
         <span> - </span>
-        <a @click.prevent="onModifyClicked(thought)" class="has-text-primary">Modify</a>
+        <a @click.prevent="onThoughtModifyClicked(thought)" class="has-text-primary">Modify</a>
         <span> - </span>
-        <a @click.prevent="onRemoveClicked(thought)" class="has-text-danger">Remove</a>
+        <a @click.prevent="onThoughtRemoveClicked(thought)" class="has-text-danger">Remove</a>
       </p>
       <VueShowdown class="content" :markdown="thought.Content" />
     </div>
@@ -36,15 +39,15 @@
         </header>
         <section class="modal-card-body">
           <b-field :type="{'is-success': thought.Tags.length > 0, 'is-danger': thought.Tags.length === 0}">
-            <b-taginput v-model="thought.Tags" allow-new placeholder="Add tags" open-on-focus autocomplete :data="tags"></b-taginput>
+            <b-taginput v-model="thought.Tags" allow-new placeholder="Add tags" open-on-focus clear-on-select autocomplete :data="tags" @typing="onTagsTyping"></b-taginput>
           </b-field>
           <b-field :type="{'is-success': thought.Content, 'is-danger': !thought.Content}">
             <b-input v-model="thought.Content" type="textarea" rows="6"></b-input>
           </b-field>
         </section>
         <footer class="modal-card-foot" style="justify-content:space-between;">
-          <button class="button" @click="onModifyClicked(null)">Cancel</button>
-          <button class="button is-success" @click="onSaveClicked" :disabled="thought.Tags.length === 0 || !thought.Content">Save</button>
+          <button class="button" @click="onThoughtModifyClicked(null)">Cancel</button>
+          <button class="button is-success" @click="onThoughtSaveClicked" :disabled="thought.Tags.length === 0 || !thought.Content">Save</button>
         </footer>
       </div>
     </div>
@@ -73,6 +76,17 @@ export default {
   }),
 
   computed: {
+    filterTags: {
+      get () {
+        if (!this.filters.tags) {
+          return []
+        }
+        return this.filters.tags.split(',')
+      },
+      set (value) {
+        this.filters.tags = value.join(',')
+      }
+    }
   },
 
   methods: {
@@ -97,26 +111,18 @@ export default {
       this.changeRouteOnFilterChange(this.filters, '/thoughts')
     },
 
-    onNewClicked () {
+    onThoughtNewClicked () {
       this.thought = {
         Content: '',
         Tags: []
       }
-
-      this.$http.get(`/thoughts/_tags`).then(response => {
-        this.tags = response.data
-      })
     },
 
-    onModifyClicked (thought) {
+    onThoughtModifyClicked (thought) {
       this.thought = thought
-
-      this.$http.get(`/thoughts/_tags`).then(response => {
-        this.tags = response.data
-      })
     },
 
-    onRemoveClicked (thought) {
+    onThoughtRemoveClicked (thought) {
       if (!confirm('Are you sure?')) {
         return false
       }
@@ -125,7 +131,7 @@ export default {
       })
     },
 
-    onSaveClicked () {
+    onThoughtSaveClicked () {
       this.$http.request({
         method: this.thought.ID ? 'put' : 'post',
         url: this.thought.ID ? `/thoughts/${this.thought.ID}` : '/thoughts',
@@ -141,6 +147,21 @@ export default {
           this.thoughts.unshift(this.thought)
         }
         this.thought = null
+      })
+    },
+
+    onTagsTyping (value) {
+      this.tags = []
+
+      if (!value) {
+        return
+      }
+
+      // TODO use upstream filtering
+      this.$http.get(`/thoughts/_tags`).then(response => {
+        this.tags = response.data.filter((tag) => {
+          return tag.toString().toLowerCase().indexOf(value.toLowerCase()) >= 0
+        });
       })
     }
   }

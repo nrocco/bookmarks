@@ -48,6 +48,7 @@ func (api *thoughts) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *thoughts) taglist(w http.ResponseWriter, r *http.Request) {
+	// TODO implement pagination, search and expose tag counts
 	jsonResponse(w, 200, api.store.ThoughtTagList(r.Context()))
 }
 
