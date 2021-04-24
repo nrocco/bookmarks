@@ -1,9 +1,14 @@
 <template>
   <div>
-    <div class="field has-addons">
-      <p class="control is-expanded">
-        <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
-      </p>
+    <div class="block">
+      <b-field grouped>
+        <div class="control">
+          <b-taginput placeholder="Filter tags" v-model="filterTags" autocomplete :data="tags" @typing="onTagsTyping" @input="onFilterChange"></b-taginput>
+        </div>
+        <div class="control is-expanded">
+          <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
+        </div>
+      </b-field>
     </div>
 
     <hr/>
@@ -15,10 +20,10 @@
         <span> - </span>
         <a class="url" :href="bookmark.URL" :target="isIphone ? '_blank' : ''">{{ bookmark.URL }}</a>
         <span> - </span>
-        <a @click.prevent="onRemoveClicked(bookmark)" class="has-text-danger">Remove</a>
+        <a @click.prevent="onBookmarkRemoveClicked(bookmark)" class="has-text-danger">Remove</a>
       </p>
       <p>
-        <span v-for="tag in bookmark.Tags" :key="tag" class="tag is-link">{{ tag }}</span>
+        <b-tag v-for="tag in bookmark.Tags" :key="tag" type="is-link" closable @close="onBookmarkTagRemoved(bookmark, tag)">{{ tag }}</b-tag>
         <span v-if="bookmark.Tags.length > 0"> - </span>
         <span>{{ bookmark.Excerpt }}&#8230;</span>
       </p>
@@ -44,10 +49,22 @@ export default {
   data: () => ({
     limit: 20,
     filters: {},
-    bookmarks: []
+    bookmarks: [],
+    tags: []
   }),
 
   computed: {
+    filterTags: {
+      get () {
+        if (!this.filters.tags) {
+          return []
+        }
+        return this.filters.tags.split(',')
+      },
+      set (value) {
+        this.filters.tags = value.join(',')
+      }
+    },
     isIphone () {
       return window.navigator.userAgent.includes('iPhone')
     }
@@ -75,9 +92,27 @@ export default {
       this.changeRouteOnFilterChange(this.filters)
     },
 
-    onRemoveClicked (bookmark) {
+    onBookmarkRemoveClicked (bookmark) {
       this.$http.delete(`/bookmarks/${bookmark.ID}`).then(() => {
         this.bookmarks.splice(this.bookmarks.indexOf(bookmark), 1)
+      })
+    },
+
+    onBookmarkTagRemoved (bookmark, tag) {
+      bookmark.Tags.splice(bookmark.Tags.indexOf(tag), 1)
+      this.$http.patch(`/bookmarks/${bookmark.ID}`, {Tags: bookmark.Tags})
+    },
+
+    onTagsTyping (value) {
+      this.tags = []
+
+      if (!value) {
+        return
+      }
+
+      // TODO add rest api to get bookmark tags
+      this.tags = ['read-it-later'].filter((tag) => {
+        return tag.toString().toLowerCase().indexOf(value.toLowerCase()) >= 0
       })
     }
   }

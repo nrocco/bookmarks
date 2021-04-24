@@ -3,7 +3,7 @@
     <div class="block">
       <b-field grouped>
         <div class="control">
-          <b-taginput v-model="filterTags" autocomplete :data="tags" @typing="onTagsTyping" @input="onFilterChange"></b-taginput>
+          <b-taginput placeholder="Filter tags" v-model="filterTags" autocomplete :data="tags" @typing="onTagsTyping" @input="onFilterChange"></b-taginput>
         </div>
         <div class="control is-expanded">
           <input class="input" type="search" placeholder="Search" v-model="filters.q" @search="onFilterChange">
@@ -108,7 +108,7 @@ export default {
     },
 
     onFilterChange () {
-      this.changeRouteOnFilterChange(this.filters, '/thoughts')
+      this.changeRouteOnFilterChange(this.filters)
     },
 
     onThoughtNewClicked () {

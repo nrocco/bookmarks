@@ -87,9 +87,9 @@ func (store *Store) BookmarkList(ctx context.Context, options *BookmarkListOptio
 		if tag == "" {
 			continue
 		} else if strings.HasPrefix(tag, "-") {
-			query.Where("NOT EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", strings.TrimPrefix(tag, "-"))
+			query.Where("NOT EXISTS (SELECT 1 FROM json_each(bookmarks.tags) where json_each.value = ?)", strings.TrimPrefix(tag, "-"))
 		} else {
-			query.Where("EXISTS (SELECT 1 FROM json_each(thoughts.tags) where json_each.value = ?)", tag)
+			query.Where("EXISTS (SELECT 1 FROM json_each(bookmarks.tags) where json_each.value = ?)", tag)
 		}
 	}
 
