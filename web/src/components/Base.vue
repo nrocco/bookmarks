@@ -10,12 +10,18 @@
         </div>
       </div>
       <div class="hero-foot">
-        <nav class="tabs is-centered">
+        <nav class="tabs is-boxed is-centered">
           <div class="container">
             <ul>
-              <router-link tag="li" exact active-class="is-active" to="/"><a>Bookmarks</a></router-link>
-              <router-link tag="li" exact active-class="is-active" to="/feeds"><a>Feeds</a></router-link>
-              <router-link tag="li" exact active-class="is-active" to="/thoughts"><a>Thoughts</a></router-link>
+              <router-link custom v-slot="{ navigate, href, isExactActive }" to="/">
+                <li :class="{'is-active': isExactActive, 'has-text-black': isExactActive}"><a :href="href" @click="navigate">Bookmarks</a></li>
+              </router-link>
+              <router-link custom v-slot="{ navigate, href, isExactActive }" to="/feeds">
+                <li :class="{'is-active': isExactActive, 'has-text-white': isExactActive}"><a :href="href" @click="navigate">Feeds</a></li>
+              </router-link>
+              <router-link custom v-slot="{ navigate, href, isExactActive }" to="/thoughts">
+                <li :class="{'is-active': isExactActive, 'has-text-black': isExactActive}"><a :href="href" @click="navigate">Thoughts</a></li>
+              </router-link>
             </ul>
           </div>
         </nav>
