@@ -45,7 +45,7 @@
             <b-input v-model="thought.Content" type="textarea" rows="6"></b-input>
           </b-field>
         </section>
-        <footer class="modal-card-foot" style="justify-content:space-between;">
+        <footer class="modal-card-foot">
           <button class="button" @click="onThoughtModifyClicked(null)">Cancel</button>
           <button class="button is-success" @click="onThoughtSaveClicked" :disabled="thought.Tags.length === 0 || !thought.Content">Save</button>
         </footer>
@@ -168,7 +168,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .thought {
   background-color: hsl(0, 0%, 98%);
   border-radius: 4px;
@@ -183,5 +183,8 @@ export default {
 .thought .content h3,
 .thought .content h4 {
   font-size: 1rem;
+}
+.modal-card-foot {
+  justify-content: space-between;
 }
 </style>

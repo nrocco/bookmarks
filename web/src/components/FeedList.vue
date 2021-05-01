@@ -160,7 +160,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .feed-item {
   background-color: hsl(0, 0%, 98%);
   border-radius: 4px;

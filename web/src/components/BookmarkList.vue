@@ -119,7 +119,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .bookmark {
   background-color: hsl(0, 0%, 98%);
   border-radius: 4px;
