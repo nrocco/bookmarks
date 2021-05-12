@@ -28,7 +28,12 @@
       <VueShowdown class="content" :markdown="thought.Content" />
     </div>
 
-    <infinite-loading :identifier="filters" @infinite="infiniteHandler"></infinite-loading>
+    <infinite-loading :identifier="filters" @infinite="onInfiniteScroll">
+      <span slot="no-more"></span>
+      <div slot="no-results">
+        <i>No thoughts found!</i>
+      </div>
+    </infinite-loading>
 
     <div v-if="thought" class="modal" :class="{'is-active': thought}">
       <div class="modal-background"></div>
@@ -55,7 +60,7 @@
 </template>
 
 <script>
-import LoaderMixin from '../mixins/loader.js'
+import LoaderMixin from '@/helpers.js'
 import InfiniteLoading from 'vue-infinite-loading';
 
 export default {
@@ -68,7 +73,6 @@ export default {
   },
 
   data: () => ({
-    limit: 10,
     filters: {},
     thoughts: [],
     thought: null,
@@ -95,14 +99,15 @@ export default {
       this.filters = filters
     },
 
-    infiniteHandler ($state) {
-      let payload = Object.assign({ _limit: this.limit, _offset: this.thoughts.length }, this.filters)
+    onInfiniteScroll ($state) {
+      let payload = Object.assign({ _limit: 20, _offset: this.thoughts.length }, this.filters)
       this.$http.get(`/thoughts`, { params: payload }).then(response => {
         this.thoughts.push(...response.data)
-        if (response.data.length === 0 || this.limit > response.data.length) {
-          $state.complete()
-        } else {
+        if (response.data.length > 0) {
           $state.loaded()
+        }
+        if (response.data.length < 20) {
+          $state.complete()
         }
       })
     },

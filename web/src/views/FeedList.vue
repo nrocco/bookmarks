@@ -64,7 +64,7 @@
 </template>
 
 <script>
-import LoaderMixin from '../mixins/loader.js'
+import LoaderMixin from '@/helpers.js'
 
 export default {
   mixins: [

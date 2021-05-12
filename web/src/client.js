@@ -1,13 +1,14 @@
 import axios from 'axios'
+import Router from '@/router'
 
-let client = axios.create({
+const client = axios.create({
   baseURL: `/api`,
   withCredentials: true
 })
 
 client.interceptors.response.use((response) => response, (error) => {
   if (error.response.status === 401) {
-    window.location.href = '/#/login'
+    Router.push({name: 'login'})
   }
   return Promise.reject(error)
 })

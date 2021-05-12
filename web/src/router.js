@@ -1,16 +1,17 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 
-import Base from '@/components/Base'
-import Login from '@/components/Login'
-
-import BookmarkList from '@/components/BookmarkList'
-import FeedList from '@/components/FeedList'
-import ThoughtList from '@/components/ThoughtList'
+import Base from '@/views/Base'
+import BookmarkList from '@/views/BookmarkList'
+import FeedList from '@/views/FeedList'
+import Login from '@/views/Login'
+import ThoughtList from '@/views/ThoughtList'
 
 Vue.use(Router)
 
 export default new Router({
+  mode: 'hash',
+  base: process.env.BASE_URL,
   routes: [
     {
       name: 'login',

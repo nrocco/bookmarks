@@ -1,4 +1,4 @@
-<template>
+<template lang="html">
   <div>
     <section class="hero is-bold" :class="color">
       <div class="hero-header">
@@ -75,7 +75,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="css" scoped>
   .bookmarklet {
     word-wrap: break-word;
     word-break: break-all;

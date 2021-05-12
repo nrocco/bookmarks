@@ -29,12 +29,17 @@
       </p>
     </div>
 
-    <infinite-loading :identifier="filters" @infinite="infiniteHandler"></infinite-loading>
+    <infinite-loading :identifier="filters" @infinite="onInfiniteScroll">
+      <span slot="no-more"></span>
+      <div slot="no-results">
+        <i>No bookmarks found!</i>
+      </div>
+    </infinite-loading>
   </div>
 </template>
 
 <script>
-import LoaderMixin from '../mixins/loader.js'
+import LoaderMixin from '@/helpers.js'
 import InfiniteLoading from 'vue-infinite-loading';
 
 export default {
@@ -47,7 +52,6 @@ export default {
   },
 
   data: () => ({
-    limit: 20,
     filters: {},
     bookmarks: [],
     tags: []
@@ -76,14 +80,15 @@ export default {
       this.filters = filters
     },
 
-    infiniteHandler ($state) {
-      let payload = Object.assign({ _limit: this.limit, _offset: this.bookmarks.length }, this.filters)
+    onInfiniteScroll ($state) {
+      let payload = Object.assign({ _limit: 20, _offset: this.bookmarks.length }, this.filters)
       this.$http.get(`/bookmarks`, { params: payload }).then(response => {
         this.bookmarks.push(...response.data)
-        if (response.data.length === 0 || this.limit > response.data.length) {
-          $state.complete()
-        } else {
+        if (response.data.length > 0) {
           $state.loaded()
+        }
+        if (response.data.length < 20) {
+          $state.complete()
         }
       })
     },
