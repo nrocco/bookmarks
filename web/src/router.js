@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Router from 'vue-router'
 
 import Base from '@/views/Base'
+
 import BookmarkList from '@/views/BookmarkList'
 import FeedList from '@/views/FeedList'
 import Login from '@/views/Login'

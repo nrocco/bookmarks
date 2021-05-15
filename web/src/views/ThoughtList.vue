@@ -100,7 +100,7 @@ export default {
     },
 
     onInfiniteScroll ($state) {
-      let payload = Object.assign({ _limit: 20, _offset: this.thoughts.length }, this.filters)
+      const payload = { ...this.filters, _limit: 20, _offset: this.thoughts.length }
       this.$http.get(`/thoughts`, { params: payload }).then(response => {
         this.thoughts.push(...response.data)
         if (response.data.length > 0) {

@@ -9,8 +9,14 @@ import router from '@/router.js'
 
 import 'buefy/dist/buefy.css'
 
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faAngleLeft, faAngleRight, faBook, faCalendarAlt, faChartLine, faEdit, faEuroSign, faExclamationCircle, faFile, faFilePdf, faFilter, faIndustry, faMinus, faMoneyBill, faPlus, faRulerVertical, faSave, faSearch, faSignOutAlt, faSort, faTimes, faTimesCircle, faTrashAlt, faUpload } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+library.add(faAngleLeft, faAngleRight, faBook, faCalendarAlt, faChartLine, faEdit, faEuroSign, faExclamationCircle, faFile, faFilePdf, faFilter, faIndustry, faMinus, faMoneyBill, faPlus, faRulerVertical, faSave, faSearch, faSignOutAlt, faSort, faTimes, faTimesCircle, faTrashAlt, faUpload)
+
 Vue.config.productionTip = false
 Vue.prototype.$http = client
+Vue.component('vue-fontawesome', FontAwesomeIcon);
 
 Vue.use(Buefy)
 Vue.use(VueShowdown, {

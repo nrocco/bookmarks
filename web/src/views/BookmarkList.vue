@@ -81,7 +81,7 @@ export default {
     },
 
     onInfiniteScroll ($state) {
-      let payload = Object.assign({ _limit: 20, _offset: this.bookmarks.length }, this.filters)
+      const payload = { ...this.filters, _limit: 20, _offset: this.bookmarks.length }
       this.$http.get(`/bookmarks`, { params: payload }).then(response => {
         this.bookmarks.push(...response.data)
         if (response.data.length > 0) {

@@ -17,7 +17,7 @@ export default {
 
 function sanitiseFilters (parameters) {
   parameters = JSON.parse(JSON.stringify(parameters))
-  Object.keys(parameters).forEach((key) => (!parameters[key]) && delete parameters[key])
+  Object.keys(parameters).forEach((key) => (parameters[key] == null || parameters[key] === "") && delete parameters[key])
 
   return parameters
 }
