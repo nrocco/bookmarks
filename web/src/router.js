@@ -1,32 +1,25 @@
 import Vue from 'vue'
-import Router from 'vue-router'
+import VueRouter from 'vue-router'
 
-import Base from '@/views/Base'
+Vue.use(VueRouter)
 
-import BookmarkList from '@/views/BookmarkList'
-import FeedList from '@/views/FeedList'
-import Login from '@/views/Login'
-import ThoughtList from '@/views/ThoughtList'
-
-Vue.use(Router)
-
-export default new Router({
+export default new VueRouter({
   mode: 'hash',
   base: process.env.BASE_URL,
   routes: [
     {
       name: 'login',
       path: '/login',
-      component: Login
+      component: () => import('@/views/Login.vue'),
     },
     {
       path: '/',
-      component: Base,
+      component: () => import('@/views/Base.vue'),
       children: [
         {
           name: 'bookmarks',
           path: '/',
-          component: BookmarkList,
+          component: () => import('@/views/BookmarkList.vue'),
           meta: {
             title: 'Bookmarks',
             subtitle: 'All articles you bookmarked',
@@ -36,7 +29,7 @@ export default new Router({
         {
           name: 'feeds',
           path: '/feeds',
-          component: FeedList,
+          component: () => import('@/views/FeedList.vue'),
           meta: {
             title: 'Feeds',
             subtitle: 'All your rss and atom feeds',
@@ -46,7 +39,7 @@ export default new Router({
         {
           name: 'thoughts',
           path: '/thoughts/:title?',
-          component: ThoughtList,
+          component: () => import('@/views/ThoughtList,.vue'),
           meta: {
             title: 'Thoughts',
             subtitle: 'All your thoughts',
