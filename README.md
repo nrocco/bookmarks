@@ -10,6 +10,17 @@ Personal zero-touch bookmarking app in the cloud, with full text search support.
 ![Screenshot](screenshot.png)
 
 
+Disclaimer!
+-----------
+
+This open source project is not primarily a `zero-touch bookmarking app`. It
+is more a personal playground for me to apply concepts I am learning about
+`go`, `vue` software engineering. From one day to other this project can
+change in ways you would not expect. And the next day it might change back.
+
+Refer to https://github.com/nrocco/bookmarks/issues/23
+
+
 Installation
 ------------
 
