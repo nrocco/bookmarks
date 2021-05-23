@@ -39,7 +39,7 @@ export default new VueRouter({
         {
           name: 'thoughts',
           path: '/thoughts/:title?',
-          component: () => import('@/views/ThoughtList,.vue'),
+          component: () => import('@/views/ThoughtList.vue'),
           meta: {
             title: 'Thoughts',
             subtitle: 'All your thoughts',
