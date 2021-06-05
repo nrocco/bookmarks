@@ -6,25 +6,12 @@ BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 .PHONY: help
 help:
-	@echo 'make build-all dist/bookmarks-amd64-freebsd dist/bookmarks-amd64-darwin dist/bookmarks-amd64-linux clear container push'
+	@echo 'make build-all dist/bookmarks-amd64-darwin dist/bookmarks-amd64-linux clear container push'
 
 .PHONY: build-all
 build-all: \
-	dist/bookmarks-amd64-freebsd \
 	dist/bookmarks-amd64-darwin \
 	dist/bookmarks-amd64-linux
-
-.PHONY: dist/bookmarks-amd64-freebsd
-dist/bookmarks-amd64-freebsd:
-	mkdir -p dist/bookmarks-amd64-freebsd
-	docker image build --pull \
-		--build-arg "BUILD_VERSION=$(BUILD_VERSION)" \
-		--build-arg "BUILD_COMMIT=$(BUILD_COMMIT)" \
-		--build-arg "BUILD_DATE=$(BUILD_DATE)" \
-		--target bin \
-		--platform freebsd/amd64 \
-		--output dist/bookmarks-amd64-freebsd \
-		.
 
 .PHONY: dist/bookmarks-amd64-darwin
 dist/bookmarks-amd64-darwin:
