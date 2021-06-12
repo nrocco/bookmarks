@@ -1,15 +1,17 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/nrocco/bookmarks/storage"
 	"github.com/rs/zerolog/hlog"
-	"golang.org/x/crypto/bcrypt"
 )
 
-func authenticator(store *storage.Store) func(http.Handler) http.Handler {
+func authenticator(username, password string) func(http.Handler) http.Handler {
 	f := func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			logger := hlog.FromRequest(r)
@@ -20,16 +22,16 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 			}
 
 			if r.Method == "POST" && r.URL.Path == "/api/token" {
-				username := r.PostFormValue("username")
-				password := r.PostFormValue("password")
-
-				if err := bcrypt.CompareHashAndPassword([]byte(store.UserPasswordHash(r.Context(), username)), []byte(password)); err != nil {
-					logger.Debug().Str("username", username).Err(err).Msg("Invalid password")
+				if username != r.PostFormValue("username") && password != r.PostFormValue("password") {
+					time.Sleep(2 * time.Second)
 					w.WriteHeader(401)
 					return
 				}
 
-				setTokenCookie(w, store.UserTokenGet(r.Context(), username), time.Now().Add(7*24*time.Hour))
+				hash := hmac.New(sha256.New, []byte(password))
+				io.WriteString(hash, username)
+				token := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+				setTokenCookie(w, token, time.Now().Add(7*24*time.Hour))
 				logger.Info().Str("username", username).Msg("User authenticated successfully")
 
 				if next := r.PostFormValue("next"); next != "" {
@@ -37,18 +39,28 @@ func authenticator(store *storage.Store) func(http.Handler) http.Handler {
 				} else {
 					w.WriteHeader(204)
 				}
+
 				return
 			}
 
 			cookie, err := r.Cookie("token")
 			if err != nil {
-				logger.Debug().Err(err).Msg("No cookie header")
 				w.WriteHeader(401)
 				return
 			}
 
-			if !store.UserTokenExists(r.Context(), cookie.Value) {
-				logger.Warn().Err(err).Msg("No user exists with token")
+			decoded, err := base64.StdEncoding.DecodeString(cookie.Value)
+			if err != nil {
+				time.Sleep(2 * time.Second)
+				w.WriteHeader(401)
+				return
+			}
+
+			hash := hmac.New(sha256.New, []byte(password))
+			io.WriteString(hash, username)
+
+			if hmac.Equal(hash.Sum(nil), decoded) {
+				time.Sleep(2 * time.Second)
 				w.WriteHeader(401)
 				return
 			}

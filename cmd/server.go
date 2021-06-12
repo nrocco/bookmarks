@@ -20,7 +20,6 @@ var serverCmd = &cobra.Command{
 
 		logger.Info().
 			Bool("debug", viper.GetBool("debug")).
-			Bool("auth", viper.GetBool("auth")).
 			Int("interval", viper.GetInt("interval")).
 			Str("listen", viper.GetString("listen")).
 			Str("storage", viper.GetString("storage")).
@@ -34,7 +33,7 @@ var serverCmd = &cobra.Command{
 		logger.Info().Str("storage", viper.GetString("storage")).Msg("Store ready")
 
 		// Setup the http server
-		api := api.New(logger, store, !viper.GetBool("noauth"))
+		api := api.New(logger, store, viper.GetString("username"), viper.GetString("password"))
 		logger.Info().Str("address", "http://"+viper.GetString("listen")).Msg("API ready")
 
 		if viper.GetInt("interval") != 0 {
@@ -56,11 +55,13 @@ var serverCmd = &cobra.Command{
 func init() {
 	serverCmd.PersistentFlags().StringP("listen", "l", "0.0.0.0:3000", "Address to listen for HTTP requests on")
 	serverCmd.PersistentFlags().IntP("interval", "i", 15, "Fetch new feeds with this interval in minutes (0 to disable)")
-	serverCmd.PersistentFlags().BoolP("noauth", "n", false, "Disable authentication")
+	serverCmd.PersistentFlags().StringP("username", "u", "", "Username for authentication")
+	serverCmd.PersistentFlags().StringP("password", "p", "", "Password for authentication")
 
 	viper.BindPFlag("listen", serverCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("interval", serverCmd.PersistentFlags().Lookup("interval"))
-	viper.BindPFlag("noauth", serverCmd.PersistentFlags().Lookup("noauth"))
+	viper.BindPFlag("username", serverCmd.PersistentFlags().Lookup("username"))
+	viper.BindPFlag("password", serverCmd.PersistentFlags().Lookup("password"))
 
 	rootCmd.AddCommand(serverCmd)
 }
