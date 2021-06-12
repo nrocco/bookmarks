@@ -60,7 +60,7 @@ protect your bookmarks you can do:
 
 Or when using docker
 
-    $ docker run -p 3000:3000 -e "BOOKMARKS_USERNAME=xxx" -e "BOOKMARKS_USERNAME=yyy" nrocco/bookmarks
+    $ docker run -p 3000:3000 -e "BOOKMARKS_USERNAME=xxx" -e "BOOKMARKS_PASSWORD=yyy" nrocco/bookmarks
 
 
 Or when using docker-compose:
@@ -71,7 +71,7 @@ Or when using docker-compose:
         image: nrocco/bookmarks
         environment:
           BOOKMARKS_USERNAME: xxx
-          BOOKMARKS_USERNAME: yyy
+          BOOKMARKS_PASSWORD: yyy
     ...
 
 
