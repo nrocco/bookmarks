@@ -8,7 +8,6 @@ require (
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
-	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.10
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/mmcdole/gofeed v1.1.3
@@ -26,7 +25,6 @@ require (
 	golang.org/x/tools v0.1.3 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	modernc.org/libc v1.9.6 // indirect
-	modernc.org/mathutil v1.4.0 // indirect
 	modernc.org/sqlite v1.10.8
 )
 
