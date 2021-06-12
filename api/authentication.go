@@ -59,7 +59,7 @@ func authenticator(username, password string) func(http.Handler) http.Handler {
 			hash := hmac.New(sha256.New, []byte(password))
 			io.WriteString(hash, username)
 
-			if hmac.Equal(hash.Sum(nil), decoded) {
+			if !hmac.Equal(hash.Sum(nil), decoded) {
 				time.Sleep(2 * time.Second)
 				w.WriteHeader(401)
 				return
