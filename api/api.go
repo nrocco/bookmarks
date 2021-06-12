@@ -19,7 +19,7 @@ import (
 )
 
 // New instantiates a new Bookmarks API instance
-func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
+func New(logger zerolog.Logger, store *storage.Store, username, password string) *API {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
@@ -34,8 +34,8 @@ func New(logger zerolog.Logger, store *storage.Store, auth bool) *API {
 		r.Use(hlog.RemoteAddrHandler("ip"))
 		r.Use(hlog.RequestIDHandler("req_id", "X-Request-Id"))
 
-		if auth {
-			r.Use(authenticator(store))
+		if username != "" && password != "" {
+			r.Use(authenticator(username, password))
 		}
 
 		r.Use(func(next http.Handler) http.Handler {
