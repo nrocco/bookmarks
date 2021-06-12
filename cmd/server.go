@@ -57,6 +57,8 @@ func init() {
 	serverCmd.PersistentFlags().StringP("listen", "l", "0.0.0.0:3000", "Address to listen for HTTP requests on")
 	serverCmd.PersistentFlags().IntP("interval", "i", 15, "Fetch new feeds with this interval in minutes (0 to disable)")
 	serverCmd.PersistentFlags().BoolP("noauth", "n", false, "Disable authentication")
+        serverCmd.PersistentFlags().StringP("username", "l", "0.0.0.0:3000", "Username for authentication")
+        serverCmd.PersistentFlags().StringP("password", "l", "0.0.0.0:3000", "Password for authentication")
 
 	viper.BindPFlag("listen", serverCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("interval", serverCmd.PersistentFlags().Lookup("interval"))
